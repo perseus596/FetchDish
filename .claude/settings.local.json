@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create vite@latest:*)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v22.22.0/bin:$PATH\")",
+      "Bash(npm install:*)",
+      "Bash(xcode-select:*)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\")",
+      "Bash(brew:*)",
+      "Bash(export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\")",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(xcodegen generate:*)",
+      "Bash(xcodegen:*)",
+      "Bash(/opt/homebrew/bin/xcodegen:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(swiftc:*)",
+      "Bash(echo:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.merrell.dev)",
+      "Bash(ls:*)",
+      "Bash(mdfind:*)",
+      "Bash(sudo xcode-select:*)",
+      "Bash(gunzip:*)",
+      "Bash(/usr/libexec/PlistBuddy:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3:*)",
+      "Bash(security find-identity -v -p codesigning)",
+      "Bash(defaults delete com.fetchdish.app)",
+      "Bash(git init:*)",
+      "Bash(.gitignore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
