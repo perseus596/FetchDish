@@ -15,7 +15,7 @@ final class Recipe {
     @Relationship(deleteRule: .cascade) var ingredients: [RecipeIngredient]
     @Relationship(deleteRule: .cascade) var instructions: [RecipeInstruction]
     var notes: String?
-    var tags: [String]
+    var tagsRaw: String = ""
     var calories: String?
     var fat: String?
     var carbs: String?
@@ -27,6 +27,19 @@ final class Recipe {
     var dateAdded: Date
     var dateModified: Date
     var isFavorite: Bool
+    var dietaryTagsRaw: String = ""
+
+    @Transient
+    var tags: [String] {
+        get { tagsRaw.isEmpty ? [] : tagsRaw.components(separatedBy: ",") }
+        set { tagsRaw = newValue.joined(separator: ",") }
+    }
+
+    @Transient
+    var dietaryTags: [String] {
+        get { dietaryTagsRaw.isEmpty ? [] : dietaryTagsRaw.components(separatedBy: ",") }
+        set { dietaryTagsRaw = newValue.joined(separator: ",") }
+    }
 
     init(
         id: UUID = UUID(),
@@ -52,7 +65,8 @@ final class Recipe {
         mood: String? = nil,
         dateAdded: Date = Date(),
         dateModified: Date = Date(),
-        isFavorite: Bool = false
+        isFavorite: Bool = false,
+        dietaryTags: [String] = []
     ) {
         self.id = id
         self.title = title
@@ -66,7 +80,7 @@ final class Recipe {
         self.ingredients = ingredients
         self.instructions = instructions
         self.notes = notes
-        self.tags = tags
+        self.tagsRaw = tags.joined(separator: ",")
         self.calories = calories
         self.fat = fat
         self.carbs = carbs
@@ -78,6 +92,7 @@ final class Recipe {
         self.dateAdded = dateAdded
         self.dateModified = dateModified
         self.isFavorite = isFavorite
+        self.dietaryTagsRaw = dietaryTags.joined(separator: ",")
     }
 }
 

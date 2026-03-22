@@ -11,6 +11,7 @@ struct ProfileView: View {
 
     @AppStorage("appearance") private var appearance: String = "system"
     @AppStorage("cookModeFontSize") private var cookModeFontSize: Double = 1.4
+    @AppStorage("appFontScale") private var appFontScale: Double = 1.0
     @State private var hasSeeded = false
 
     @State private var showExportSheet = false
@@ -58,6 +59,7 @@ struct ProfileView: View {
                 favoriteIngredientsSection
                 allergiesDietarySection
                 appearanceSection
+                textSizeSection
                 cookModeSection
                 dataSection
                 subscriptionSection
@@ -295,6 +297,30 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Text Size
+
+    private var textSizeSection: some View {
+        ProfileSection(title: "Text Size", footer: "Adjusts font size across the entire app.") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Size")
+                    Spacer()
+                    Text(appFontScale < 1.15 ? "Normal" :
+                         appFontScale < 1.35 ? "Large" :
+                         appFontScale < 1.55 ? "Larger" :
+                         appFontScale < 1.75 ? "Extra Large" : "Maximum")
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: $appFontScale, in: 1.0...2.0, step: 0.1)
+                    .tint(Color("AccentGreen"))
+                Text("The quick brown fox jumps over the lazy dog.")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
     // MARK: - Cook Mode
 
     private var cookModeSection: some View {
@@ -447,7 +473,12 @@ struct ProfileView: View {
             try? modelContext.save()
         }
         if dietaryPrefs.isEmpty {
-            let defaults = ["Vegan", "Vegetarian", "Pescatarian", "Keto", "Paleo", "Gluten-Free", "Dairy-Free", "Low-Carb"]
+            let defaults = [
+                "Vegan", "Vegetarian", "Pescatarian", "Plant-Based",
+                "Keto", "Paleo", "Whole30", "Low-Carb", "Mediterranean",
+                "Gluten-Free", "Dairy-Free", "Nut-Free", "Sugar-Free",
+                "Halal", "Kosher", "Carnivore", "Raw Food", "Other"
+            ]
             for name in defaults {
                 modelContext.insert(UserDietaryPreference(name: name, isActive: false))
             }

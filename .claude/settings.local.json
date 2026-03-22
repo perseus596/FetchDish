@@ -30,7 +30,8 @@
       "Bash(git init:*)",
       "Bash(.gitignore:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh auth:*)"
     ]
   }
 }

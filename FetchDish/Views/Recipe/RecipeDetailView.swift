@@ -76,7 +76,7 @@ struct RecipeDetailView: View {
                     // Description
                     if let desc = recipe.descriptionText, !desc.isEmpty, !cookMode {
                         Text(desc)
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal)
                     }
@@ -118,12 +118,17 @@ struct RecipeDetailView: View {
                     if let notes = recipe.notes, !notes.isEmpty, !cookMode {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Notes")
-                                .font(.headline)
+                                .font(.appHeadline)
                                 .padding(.horizontal)
                             Text(notes)
-                                .font(.body)
+                                .font(.appBody)
                                 .padding(.horizontal)
                         }
+                    }
+
+                    // Dietary tags
+                    if !cookMode {
+                        dietarySection(recipe)
                     }
 
                     // Tags
@@ -131,7 +136,7 @@ struct RecipeDetailView: View {
                         FlowLayout(spacing: 8) {
                             ForEach(recipe.tags, id: \.self) { tag in
                                 Text(tag)
-                                    .font(.caption)
+                                    .font(.appCaption)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 5)
                                     .background(Color("AccentGreen").opacity(0.15))
@@ -146,9 +151,9 @@ struct RecipeDetailView: View {
                         Link(destination: linkUrl) {
                             HStack(spacing: 6) {
                                 Image(systemName: "link")
-                                    .font(.caption)
+                                    .font(.appCaption)
                                 Text("View Original")
-                                    .font(.caption)
+                                    .font(.appCaption)
                             }
                             .foregroundStyle(Color("AccentGreen"))
                         }
@@ -206,7 +211,7 @@ struct RecipeDetailView: View {
                 }
                 .popover(isPresented: $showCookModeTip, arrowEdge: .top) {
                     Text("**Cook Mode** — keeps your screen on and enlarges text while you cook")
-                        .font(.subheadline)
+                        .font(.appSubheadline)
                         .padding()
                         .frame(width: 220)
                         .presentationCompactAdaptation(.popover)
@@ -439,7 +444,7 @@ struct RecipeDetailView: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Ingredients")
-                    .font(cookMode ? .system(size: 18 * cookModeFontSize, weight: .bold) : .headline)
+                    .font(cookMode ? .system(size: 18 * cookModeFontSize, weight: .bold) : .appHeadline)
                 Spacer()
                 if !cookMode {
                     Button {
@@ -453,7 +458,7 @@ struct RecipeDetailView: View {
                         HapticManager.selection()
                     } label: {
                         Text(allChecked ? "Deselect All" : "Select All")
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                             .foregroundStyle(Color("AccentGreen"))
                     }
                 }
@@ -471,10 +476,10 @@ struct RecipeDetailView: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: ingredient.isChecked ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(ingredient.isChecked ? Color("AccentGreen") : .secondary)
-                            .font(.body)
+                            .font(.appBody)
 
                         Text(ingredientDisplayText(ingredient))
-                            .font(cookMode ? .system(size: 16 * cookModeFontSize) : .body)
+                            .font(cookMode ? .system(size: 16 * cookModeFontSize) : .appBody)
                             .strikethrough(ingredient.isChecked)
                             .opacity(ingredient.isChecked ? 0.5 : 1)
                             .multilineTextAlignment(.leading)
@@ -510,7 +515,7 @@ struct RecipeDetailView: View {
                         Image(systemName: "cart.badge.plus")
                         Text("Add \(checkedIngredients.count) to Shopping List")
                     }
-                    .font(.subheadline.bold())
+                    .font(.appSubheadline.bold())
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -531,7 +536,7 @@ struct RecipeDetailView: View {
                         Image(systemName: "cart.fill")
                         Text("Go back to Shopping List")
                     }
-                    .font(.subheadline.bold())
+                    .font(.appSubheadline.bold())
                     .foregroundStyle(Color("AccentGreen"))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -555,13 +560,13 @@ struct RecipeDetailView: View {
         var result = AttributedString()
         if let amount = ingredient.amount {
             var amountStr = AttributedString(IngredientParser.scale(amount: amount, by: 1.0))
-            amountStr.font = .body.bold()
+            amountStr.font = .appBody.bold()
             result.append(amountStr)
             result.append(AttributedString(" "))
         }
         if let unit = ingredient.unit {
             var unitStr = AttributedString(unit)
-            unitStr.font = .body.bold()
+            unitStr.font = .appBody.bold()
             result.append(unitStr)
             result.append(AttributedString(" "))
         }
@@ -576,7 +581,7 @@ struct RecipeDetailView: View {
     private func instructionSection(_ recipe: Recipe) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Instructions")
-                .font(cookMode ? .system(size: 18 * cookModeFontSize, weight: .bold) : .headline)
+                .font(cookMode ? .system(size: 18 * cookModeFontSize, weight: .bold) : .appHeadline)
                 .padding(.horizontal)
 
             ForEach(recipe.instructions.sorted(by: { $0.stepNumber < $1.stepNumber })) { instruction in
@@ -594,7 +599,7 @@ struct RecipeDetailView: View {
                 } label: {
                     HStack(alignment: .top, spacing: 12) {
                         Text("\(instruction.stepNumber)")
-                            .font(.caption.bold())
+                            .font(.appCaption.bold())
                             .foregroundStyle(.white)
                             .frame(width: 28, height: 28)
                             .background(
@@ -607,7 +612,7 @@ struct RecipeDetailView: View {
                             .clipShape(Circle())
 
                         Text(instruction.text)
-                            .font(cookMode ? .system(size: 16 * cookModeFontSize) : .body)
+                            .font(cookMode ? .system(size: 16 * cookModeFontSize) : .appBody)
                             .multilineTextAlignment(.leading)
                             .opacity(instruction.isCompleted ? 0.5 : 1)
                     }
@@ -626,10 +631,57 @@ struct RecipeDetailView: View {
         }
     }
 
+    static let dietaryOptions = [
+        "Vegan", "Vegetarian", "Pescatarian", "Plant-Based",
+        "Keto", "Paleo", "Whole30", "Low-Carb", "Mediterranean",
+        "Gluten-Free", "Dairy-Free", "Nut-Free", "Sugar-Free",
+        "Halal", "Kosher", "Carnivore", "Raw Food", "Other"
+    ]
+
+    private func dietarySection(_ recipe: Recipe) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Dietary")
+                .font(.appHeadline)
+                .padding(.horizontal)
+
+            FlowLayout(spacing: 6) {
+                ForEach(Self.dietaryOptions, id: \.self) { option in
+                    let isTagged = recipe.dietaryTags.contains(option)
+                    Button {
+                        if isTagged {
+                            recipe.dietaryTags.removeAll { $0 == option }
+                        } else {
+                            recipe.dietaryTags.append(option)
+                        }
+                        try? modelContext.save()
+                        HapticManager.light()
+                    } label: {
+                        HStack(spacing: 4) {
+                            if isTagged {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            Text(option)
+                                .font(.appCaption.weight(.medium))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(isTagged ? Color("AccentGreen") : Color("AccentGreen").opacity(0.1))
+                        .foregroundStyle(isTagged ? .white : Color("AccentGreen"))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().strokeBorder(Color("AccentGreen").opacity(0.35), lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
     private func nutritionSection(_ recipe: Recipe) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Nutrition")
-                .font(.headline)
+                .font(.appHeadline)
                 .padding(.horizontal)
 
             HStack(spacing: 12) {
@@ -660,9 +712,9 @@ struct NutritionBadge: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.caption.bold())
+                .font(.appCaption.bold())
             Text(label)
-                .font(.caption2)
+                .font(.appCaption2)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -683,7 +735,7 @@ struct ServingAdjusterView: View {
     var body: some View {
         HStack(spacing: 16) {
             Text("Servings")
-                .font(.subheadline.weight(.medium))
+                .font(.appSubheadline.weight(.medium))
 
             Spacer()
 
@@ -718,7 +770,7 @@ struct ServingAdjusterView: View {
                     HapticManager.light()
                 } label: {
                     Text("Reset")
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(Color("Terracotta"))
                 }
             }
@@ -787,10 +839,10 @@ struct UnitConverterView: View {
                     .foregroundStyle(Color("Terracotta"))
                     .font(.title3)
                 Text("Unit Converter")
-                    .font(.headline)
+                    .font(.appHeadline)
                 Spacer()
                 Label("Pro", systemImage: "star.fill")
-                    .font(.caption2.bold())
+                    .font(.appCaption2.bold())
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Color("Terracotta"))
@@ -803,14 +855,14 @@ struct UnitConverterView: View {
                         .font(.largeTitle)
                         .foregroundStyle(Color("Terracotta").opacity(0.6))
                     Text("Unit Converter is a Pro feature.")
-                        .font(.subheadline)
+                        .font(.appSubheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                     Button {
                         showProUpgrade = true
                     } label: {
                         Text("Upgrade to Pro")
-                            .font(.subheadline.bold())
+                            .font(.appSubheadline.bold())
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -868,12 +920,12 @@ struct UnitConverterView: View {
                         let formatted = value.truncatingRemainder(dividingBy: 1) == 0
                             ? String(Int(value)) : String(format: "%.2f", value)
                         Text("\(formatted) \(fromUnit.rawValue)  =  \(result) \(toUnit.rawValue)")
-                            .font(.callout)
+                            .font(.appCallout)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
                     } else if !canConvert {
                         Text("Can't convert between weight and volume")
-                            .font(.caption)
+                            .font(.appCaption)
                             .foregroundStyle(Color("Terracotta"))
                             .frame(maxWidth: .infinity)
                     }

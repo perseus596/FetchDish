@@ -125,7 +125,7 @@ struct ShoppingListView: View {
                 .foregroundStyle(.primary)
 
             Text("Open any recipe and tap \"Add to Shopping List\" to get started.")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -135,7 +135,7 @@ struct ShoppingListView: View {
                     Image(systemName: "book.fill")
                     Text("Browse Recipes")
                 }
-                .font(.subheadline.bold())
+                .font(.appSubheadline.bold())
                 .foregroundStyle(.white)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
@@ -164,7 +164,7 @@ struct ShoppingListView: View {
                 Section {
                     HStack {
                         Text("\(items.count) item\(items.count == 1 ? "" : "s")")
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                             .foregroundStyle(Color(red: 0.2, green: 0.2, blue: 0.2))
                         Spacer()
                         Button {
@@ -178,7 +178,7 @@ struct ShoppingListView: View {
                             HapticManager.selection()
                         } label: {
                             Text(allChecked ? "Deselect All" : "Select All")
-                                .font(.subheadline)
+                                .font(.appSubheadline)
                                 .foregroundStyle(Color("AccentGreen"))
                         }
                     }
@@ -204,11 +204,11 @@ struct ShoppingListView: View {
                                         Text(item.ingredient)
                                             .strikethrough(item.isChecked)
                                             .opacity(item.isChecked ? 0.4 : 1)
-                                            .font(.callout.weight(.medium))
+                                            .font(.appCallout.weight(.medium))
                                             .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
 
                                         Text(item.recipeName)
-                                            .font(.footnote)
+                                            .font(.appFootnote)
                                             .foregroundStyle(Color(red: 0.35, green: 0.3, blue: 0.25))
                                     }
 
@@ -249,7 +249,7 @@ struct ShoppingListView: View {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(Color("AccentGreen"))
                     Text("All done! Clear the list?")
-                        .font(.subheadline.weight(.medium))
+                        .font(.appSubheadline.weight(.medium))
                 }
             }
 
@@ -266,10 +266,10 @@ struct ShoppingListView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "trash")
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                         Text(allChecked ? "Clear List" : "Remove (\(checkedCount))")
                     }
-                    .font(.subheadline.bold())
+                    .font(.appSubheadline.bold())
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 13)
@@ -292,7 +292,7 @@ struct ShoppingListView: View {
                             Image(systemName: "arrow.uturn.backward")
                             Text("Undo")
                         }
-                        .font(.subheadline.bold())
+                        .font(.appSubheadline.bold())
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 13)

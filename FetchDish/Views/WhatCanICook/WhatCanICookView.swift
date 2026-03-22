@@ -102,7 +102,7 @@ struct WhatCanICookView: View {
             Text("No recipes yet")
                 .font(.title3.bold())
             Text("Import some recipes first, then come back to find what you can cook!")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -116,7 +116,7 @@ struct WhatCanICookView: View {
     private var moodCuisineSelector: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("What are you in the mood for?")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
 
@@ -156,7 +156,7 @@ struct WhatCanICookView: View {
             HapticManager.selection()
         } label: {
             Text(label)
-                .font(.caption)
+                .font(.appCaption)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .background(isSelected ? activeColor : activeColor.opacity(0.12))
@@ -171,7 +171,7 @@ struct WhatCanICookView: View {
     private var ingredientSelector: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Select ingredients you have:")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
 
@@ -222,7 +222,7 @@ struct WhatCanICookView: View {
                     HapticManager.selection()
                 } label: {
                     Label("Add Favorites", systemImage: "heart.fill")
-                        .font(.caption)
+                        .font(.appCaption)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Color("AccentGreen").opacity(0.2))
@@ -237,7 +237,7 @@ struct WhatCanICookView: View {
                     HapticManager.selection()
                 } label: {
                     Label("Clear", systemImage: "xmark.circle")
-                        .font(.caption)
+                        .font(.appCaption)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Color("Terracotta").opacity(0.2))
@@ -257,7 +257,7 @@ struct WhatCanICookView: View {
                     showCategorized ? "A-Z" : "By Category",
                     systemImage: showCategorized ? "textformat.abc" : "square.grid.2x2"
                 )
-                .font(.caption)
+                .font(.appCaption)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Color.blue.opacity(0.15))
@@ -286,7 +286,7 @@ struct WhatCanICookView: View {
             ForEach(categorizedIngredients, id: \.0) { category, names in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(category.uppercased())
-                        .font(.caption2.weight(.semibold))
+                        .font(.appCaption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
 
@@ -313,7 +313,7 @@ struct WhatCanICookView: View {
             HapticManager.selection()
         } label: {
             Text(name.capitalized)
-                .font(.caption)
+                .font(.appCaption)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .background(
@@ -336,7 +336,7 @@ struct WhatCanICookView: View {
             Divider().padding(.horizontal)
 
             Text("\(matchingRecipes.count) matching recipe\(matchingRecipes.count == 1 ? "" : "s")")
-                .font(.subheadline.weight(.medium))
+                .font(.appSubheadline.weight(.medium))
                 .padding(.horizontal)
 
             if matchingRecipes.isEmpty {
@@ -359,7 +359,7 @@ struct WhatCanICookView: View {
                 .font(.title2)
                 .foregroundStyle(.secondary)
             Text("No matches with these filters")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -372,13 +372,13 @@ struct WhatCanICookView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.recipe.title)
-                    .font(.subheadline.bold())
+                    .font(.appSubheadline.bold())
                     .lineLimit(2)
                     .foregroundStyle(.primary)
 
                 if !selectedIngredients.isEmpty {
                     Text("\(item.matchCount)/\(item.totalCount) ingredients")
-                        .font(.caption)
+                        .font(.appCaption)
                         .foregroundStyle(.secondary)
 
                     GeometryReader { geo in
@@ -403,7 +403,7 @@ struct WhatCanICookView: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.caption)
+                .font(.appCaption)
                 .foregroundStyle(.secondary)
         }
         .padding(10)

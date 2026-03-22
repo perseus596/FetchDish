@@ -175,7 +175,7 @@ struct LibraryView: View {
                 .font(.title3.bold())
 
             Text("Import a recipe from any URL or add one manually to get started.")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -231,7 +231,7 @@ struct LibraryView: View {
     private var libraryHeader: some View {
         HStack {
             Text("\(filteredRecipes.count) recipe\(filteredRecipes.count == 1 ? "" : "s")")
-                .font(.subheadline)
+                .font(.appSubheadline)
                 .foregroundStyle(.secondary)
 
             if let tag = selectedTag {
@@ -245,7 +245,7 @@ struct LibraryView: View {
 
             if !ProStatus.isPro {
                 Text("\(recipes.count)/\(ProStatus.freeRecipeLimit)")
-                    .font(.caption)
+                    .font(.appCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -258,9 +258,9 @@ struct LibraryView: View {
             HStack(spacing: 4) {
                 Text(label)
                 Image(systemName: "xmark.circle.fill")
-                    .font(.caption2)
+                    .font(.appCaption2)
             }
-            .font(.caption)
+            .font(.appCaption)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color("AccentGreen").opacity(0.2))

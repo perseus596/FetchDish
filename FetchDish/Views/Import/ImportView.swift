@@ -33,7 +33,7 @@ struct ImportView: View {
                         .font(.title2.bold())
 
                     Text("Paste any recipe URL. We'll grab just the recipe — no ads, no life stories.")
-                        .font(.subheadline)
+                        .font(.appSubheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
@@ -67,7 +67,7 @@ struct ImportView: View {
                         }
                     } label: {
                         Label("Paste from Clipboard", systemImage: "doc.on.clipboard")
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                     }
                     .tint(Color("AccentGreen"))
                     #endif
@@ -103,7 +103,7 @@ struct ImportView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                         Text(error)
-                            .font(.subheadline)
+                            .font(.appSubheadline)
                             .foregroundStyle(.secondary)
                     }
                     .padding()
@@ -125,7 +125,7 @@ struct ImportView: View {
                         Text("Import from File")
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(.appCaption)
                             .foregroundStyle(.tertiary)
                     }
                     .padding()
@@ -144,7 +144,7 @@ struct ImportView: View {
                         Text("Add Recipe Manually")
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(.appCaption)
                             .foregroundStyle(.tertiary)
                     }
                     .padding()
