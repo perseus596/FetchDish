@@ -34,6 +34,23 @@ struct RecipeDetailView: View {
     #if os(macOS)
     @State private var showConverter = false
     #endif
+
+    // MARK: - Auto-scroll state
+    @State private var autoScrollPlaying = false
+    @State private var autoScrollSpeed: Int = 2          // 0…4
+    @State private var autoScrollIndex: Int = 0
+    @State private var autoScrollTimer: Timer? = nil
+    private static let autoScrollAnchorCount = 500
+    private static let autoScrollBottomID = "autoScrollBottom"
+
+    // Speed table: (timerInterval, pointsPerTick)
+    private static let speedTable: [(interval: Double, points: Double)] = [
+        (0.05, 2),
+        (0.04, 3),
+        (0.03, 5),
+        (0.02, 6),
+        (0.01, 8)
+    ]
     #if canImport(UIKit)
     @State private var decodedImage: UIImage?
     #else
@@ -66,6 +83,8 @@ struct RecipeDetailView: View {
 
     @ViewBuilder
     private func recipeContent(_ recipe: Recipe) -> some View {
+        ScrollViewReader { proxy in
+        ZStack(alignment: .bottom) {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Hero image
@@ -326,10 +345,57 @@ struct RecipeDetailView: View {
                         .padding(.horizontal)
                     }
 
-                    Spacer(minLength: 100)
+                    Spacer(minLength: cookMode ? 140 : 100)
+                    Color.clear.frame(height: 0).id(Self.autoScrollBottomID)
+                }
+            }
+            .background(
+                GeometryReader { geo in
+                    if cookMode {
+                        ZStack {
+                            ForEach(0..<Self.autoScrollAnchorCount, id: \.self) { i in
+                                Color.clear
+                                    .frame(width: 1, height: 1)
+                                    .id(i)
+                                    .position(
+                                        x: 1,
+                                        y: geo.size.height * CGFloat(i) / CGFloat(Self.autoScrollAnchorCount - 1)
+                                    )
+                            }
+                        }
+                    }
+                }
+            )
+        } // ScrollView
+        // Cook mode auto-scroll control bar
+        if cookMode {
+            CookModeScrollBar(
+                isPlaying: $autoScrollPlaying,
+                speed: $autoScrollSpeed
+            )
+            .onChange(of: autoScrollPlaying) { _, playing in
+                if playing {
+                    startAutoScroll(proxy: proxy)
+                } else {
+                    stopAutoScroll()
+                }
+            }
+            .onChange(of: autoScrollSpeed) { _, _ in
+                if autoScrollPlaying {
+                    stopAutoScroll()
+                    startAutoScroll(proxy: proxy)
                 }
             }
         }
+        } // ZStack
+        .onChange(of: cookMode) { _, active in
+            if !active {
+                stopAutoScroll()
+                autoScrollPlaying = false
+                autoScrollIndex = 0
+            }
+        }
+        } // ScrollViewReader
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -487,6 +553,45 @@ struct RecipeDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Auto-scroll helpers
+
+    private func startAutoScroll(proxy: ScrollViewProxy) {
+        let config = Self.speedTable[autoScrollSpeed]
+        let anchorCount = Self.autoScrollAnchorCount
+        // virtualPosition tracks progress through the content (0…10000).
+        // It is captured by value in the timer closure and mutated each tick.
+        var virtualPosition: Double = Double(autoScrollIndex) * (10000.0 / Double(anchorCount))
+        var lastIndex = autoScrollIndex
+
+        let timer = Timer(timeInterval: config.interval, repeats: true) { _ in
+            virtualPosition += config.points
+            let maxVirtual = 10000.0
+            if virtualPosition >= maxVirtual {
+                virtualPosition = 0
+                lastIndex = 0
+                autoScrollIndex = 0
+                withAnimation(.linear(duration: config.interval)) {
+                    proxy.scrollTo(0, anchor: .top)
+                }
+                return
+            }
+            let newIndex = Int(virtualPosition / maxVirtual * Double(anchorCount))
+            guard newIndex != lastIndex else { return }
+            lastIndex = newIndex
+            autoScrollIndex = newIndex
+            withAnimation(.linear(duration: config.interval)) {
+                proxy.scrollTo(newIndex, anchor: .top)
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        autoScrollTimer = timer
+    }
+
+    private func stopAutoScroll() {
+        autoScrollTimer?.invalidate()
+        autoScrollTimer = nil
     }
 
     // MARK: - Subviews
@@ -871,6 +976,48 @@ struct RecipeDetailView: View {
 }
 
 // MARK: - Supporting Views
+
+struct CookModeScrollBar: View {
+    @Binding var isPlaying: Bool
+    @Binding var speed: Int   // 0 (slow) … 4 (fast)
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Button {
+                isPlaying.toggle()
+            } label: {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.title2)
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(isPlaying ? Color("Terracotta") : Color("AccentGreen"))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+
+            HStack(spacing: 8) {
+                Image(systemName: "tortoise")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Slider(value: Binding(
+                    get: { Double(speed) },
+                    set: { speed = Int($0.rounded()) }
+                ), in: 0...4, step: 1)
+                .tint(Color("AccentGreen"))
+                Image(systemName: "hare")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+    }
+}
 
 struct NutritionBadge: View {
     let label: String
