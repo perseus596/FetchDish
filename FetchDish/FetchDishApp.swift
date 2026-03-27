@@ -17,16 +17,20 @@ struct FetchDishApp: App {
             UserDietaryPreference.self,
         ])
 
+        let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let storeDir = appSupportURL.appendingPathComponent("FetchDish", isDirectory: true)
+        let storeURL = storeDir.appendingPathComponent("default.store")
+        try? FileManager.default.createDirectory(at: storeDir, withIntermediateDirectories: true)
+
         let config = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false,
+            url: storeURL,
             cloudKitDatabase: .none
         )
 
         do {
             return try ModelContainer(for: schema, configurations: [config])
         } catch {
-            print("SwiftData container error:", error)
             fatalError("Could not create ModelContainer: \(error)")
         }
     }
@@ -116,7 +120,6 @@ struct MacRootView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 620)
-        .toolbarColorScheme(.light, for: .windowToolbar)
         .environment(\.dynamicTypeSize, appDynamicTypeSize)
         .onChange(of: selectedDestination) { _, _ in
             navigationPath = NavigationPath()

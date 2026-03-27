@@ -25,6 +25,12 @@ struct RecipeDetailView: View {
     @State private var showGoToShoppingList = false
     @State private var showCookModeTip = false
     @AppStorage("hasSeenCookModeTip") private var hasSeenCookModeTip = false
+    @State private var showEditSheet = false
+    @State private var showMyRecipeIntro = false
+    @State private var showMyRecipeEdit = false
+    @State private var introUserProceeded = false
+    @State private var showProUpgradeForEdit = false
+    @State private var showProUpgradeForMyRecipe = false
     #if os(macOS)
     @State private var showConverter = false
     #endif
@@ -68,10 +74,170 @@ struct RecipeDetailView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 16) {
-                    // Title
-                    Text(recipe.title)
-                        .font(cookMode ? .system(size: 24 * cookModeFontSize, weight: .bold) : .title2.bold())
-                        .padding(.horizontal)
+                    // Title row with Edit / My Recipe buttons
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(recipe.title)
+                            .font(cookMode ? .system(size: 24 * cookModeFontSize, weight: .bold) : .title2.bold())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if !cookMode {
+                            HStack(spacing: 6) {
+                                // Edit button — sheet lives on this button so it is the sole
+                                // sheet owner for this toggle state.
+                                Button {
+                                    if ProStatus.isPro {
+                                        showEditSheet = true
+                                    } else {
+                                        showProUpgradeForEdit = true
+                                    }
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                        .font(.appCaption.weight(.medium))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(Color("AccentGreen").opacity(0.12))
+                                        .foregroundStyle(Color("AccentGreen"))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                                // Each sheet is attached to its own distinct view to avoid the
+                                // SwiftUI bug where only the last chained .sheet on a single
+                                // view is reliably presented.
+                                .sheet(isPresented: $showEditSheet) {
+                                    EditRecipeSheet(recipe: recipe, mode: .edit) { updatedDraft in
+                                        recipe.title = updatedDraft.title
+                                        recipe.servings = updatedDraft.servings
+                                        recipe.prepTime = updatedDraft.prepTime.isEmpty ? recipe.prepTime : updatedDraft.prepTime
+                                        recipe.cookTime = updatedDraft.cookTime.isEmpty ? recipe.cookTime : updatedDraft.cookTime
+                                        recipe.totalTime = updatedDraft.totalTime.isEmpty ? recipe.totalTime : updatedDraft.totalTime
+                                        recipe.notes = updatedDraft.notes
+                                        // Sync ingredients
+                                        let existing = recipe.ingredients
+                                        for ing in existing { modelContext.delete(ing) }
+                                        for (i, di) in updatedDraft.ingredients.enumerated() {
+                                            let ing = RecipeIngredient(
+                                                original: [di.amount, di.unit, di.name]
+                                                    .compactMap { $0.isEmpty ? nil : $0 }.joined(separator: " "),
+                                                amount: EditRecipeSheet.parseAmount(di.amount),
+                                                unit: di.unit.isEmpty ? nil : di.unit,
+                                                name: di.name.isEmpty ? nil : di.name,
+                                                sortOrder: i
+                                            )
+                                            modelContext.insert(ing)
+                                            recipe.ingredients.append(ing)
+                                        }
+                                        // Sync instructions
+                                        let existingInstr = recipe.instructions
+                                        for instr in existingInstr { modelContext.delete(instr) }
+                                        for (i, text) in updatedDraft.instructions.enumerated() {
+                                            let instr = RecipeInstruction(stepNumber: i + 1, text: text)
+                                            modelContext.insert(instr)
+                                            recipe.instructions.append(instr)
+                                        }
+                                        recipe.dateModified = Date()
+                                        do {
+                                            try modelContext.save()
+                                        } catch {
+                                            modelContext.rollback()
+                                            print("Save error: \(error)")
+                                        }
+                                    }
+                                }
+                                .sheet(isPresented: $showProUpgradeForEdit) { ProUpgradeSheet() }
+
+                                // My Recipe button — its two sheets (intro + copy editor) live
+                                // here, each on a separate view so they don't conflict.
+                                Button {
+                                    if ProStatus.isPro {
+                                        showMyRecipeIntro = true
+                                    } else {
+                                        showProUpgradeForMyRecipe = true
+                                    }
+                                } label: {
+                                    Label("My Recipe", systemImage: "person.crop.rectangle")
+                                        .font(.appCaption.weight(.medium))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(Color("Terracotta").opacity(0.12))
+                                        .foregroundStyle(Color("Terracotta"))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                                .sheet(isPresented: $showProUpgradeForMyRecipe) { ProUpgradeSheet() }
+
+                                // showMyRecipeIntro lives on its own hidden anchor so it does
+                                // not shadow showProUpgradeForMyRecipe on the same button node.
+                                Color.clear
+                                    .frame(width: 0, height: 0)
+                                    .sheet(isPresented: $showMyRecipeIntro, onDismiss: {
+                                        if introUserProceeded {
+                                            introUserProceeded = false
+                                            showMyRecipeEdit = true
+                                        }
+                                    }) {
+                                        MyRecipeIntroSheet(originalTitle: recipe.title) {
+                                            introUserProceeded = true
+                                            showMyRecipeIntro = false
+                                        }
+                                    }
+
+                                // The copy editor sheet lives on an independent hidden view so
+                                // it does not share a sheet slot with any other button above.
+                                Color.clear
+                                    .frame(width: 0, height: 0)
+                                    .sheet(isPresented: $showMyRecipeEdit) {
+                                        EditRecipeSheet(recipe: recipe, mode: .copy) { draft in
+                                            let originalTitle = recipe.title
+                                            // Create brand new child objects
+                                            let newIngredients = draft.ingredients.enumerated().map { (i, di) in
+                                                RecipeIngredient(
+                                                    original: [di.amount, di.unit, di.name]
+                                                        .compactMap { $0.isEmpty ? nil : $0 }.joined(separator: " "),
+                                                    amount: EditRecipeSheet.parseAmount(di.amount),
+                                                    unit: di.unit.isEmpty ? nil : di.unit,
+                                                    name: di.name.isEmpty ? nil : di.name,
+                                                    sortOrder: i
+                                                )
+                                            }
+                                            let newInstructions = draft.instructions.enumerated().map { (i, text) in
+                                                RecipeInstruction(stepNumber: i + 1, text: text)
+                                            }
+                                            // Create a brand new Recipe — never touch the original
+                                            let copy = Recipe(
+                                                title: draft.title,
+                                                descriptionText: recipe.descriptionText,
+                                                sourceUrl: recipe.sourceUrl,
+                                                imageData: recipe.imageData,
+                                                prepTime: draft.prepTime.isEmpty ? recipe.prepTime : draft.prepTime,
+                                                cookTime: draft.cookTime.isEmpty ? recipe.cookTime : draft.cookTime,
+                                                totalTime: draft.totalTime.isEmpty ? recipe.totalTime : draft.totalTime,
+                                                servings: draft.servings,
+                                                notes: draft.notes,
+                                                tags: recipe.tags,
+                                                cuisine: recipe.cuisine,
+                                                mood: recipe.mood,
+                                                dietaryTags: recipe.dietaryTags
+                                            )
+                                            // Insert the new Recipe first, then its children
+                                            modelContext.insert(copy)
+                                            for ing in newIngredients {
+                                                modelContext.insert(ing)
+                                                copy.ingredients.append(ing)
+                                            }
+                                            for ins in newInstructions {
+                                                modelContext.insert(ins)
+                                                copy.instructions.append(ins)
+                                            }
+                                            do { try modelContext.save() } catch { print("Save error: \(error)") }
+                                            toastMessage = "\"My \(originalTitle)\" saved!"
+                                            showToast = true
+                                            HapticManager.success()
+                                        }
+                                    }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
 
                     // Description
                     if let desc = recipe.descriptionText, !desc.isEmpty, !cookMode {
@@ -181,7 +347,7 @@ struct RecipeDetailView: View {
                     }
                 }
                 .popover(isPresented: $showConverter, arrowEdge: .top) {
-                    UnitConverterView()
+                    UnitConverterView(servingMultiplier: servingMultiplier)
                 }
                 #endif
 
@@ -330,24 +496,25 @@ struct RecipeDetailView: View {
     }
     
     private func shareRecipe(format: ShareFormat) {
-        let text = ExportImportService.recipeAsText(recipe!, servingMultiplier: servingMultiplier)
-        
+        guard let recipe = recipe else { return }
+        let text = ExportImportService.recipeAsText(recipe, servingMultiplier: servingMultiplier)
+
         #if canImport(UIKit)
         var itemsToShare: [Any] = []
-        
+
         switch format {
         case .text:
             itemsToShare = [text]
         case .pdf:
-            if let pdfData = ExportImportService.exportRecipesAsPDF([recipe!]) {
-                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(recipe!.title).pdf")
+            if let pdfData = ExportImportService.exportRecipesAsPDF([recipe]) {
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(recipe.title).pdf")
                 try? pdfData.write(to: tempURL)
                 itemsToShare = [tempURL]
             } else {
                 itemsToShare = [text]
             }
         }
-        
+
         let ac = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
@@ -362,10 +529,10 @@ struct RecipeDetailView: View {
             toastMessage = "Copied to clipboard!"
             showToast = true
         case .pdf:
-            if let pdfData = ExportImportService.exportRecipesAsPDF([recipe!]) {
+            if let pdfData = ExportImportService.exportRecipesAsPDF([recipe]) {
                 let savePanel = NSSavePanel()
                 savePanel.allowedContentTypes = [.pdf]
-                savePanel.nameFieldStringValue = "\(recipe!.title).pdf"
+                savePanel.nameFieldStringValue = "\(recipe.title).pdf"
                 savePanel.begin { response in
                     if response == .OK, let url = savePanel.url {
                         try? pdfData.write(to: url)
@@ -476,10 +643,10 @@ struct RecipeDetailView: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: ingredient.isChecked ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(ingredient.isChecked ? Color("AccentGreen") : .secondary)
-                            .font(.appBody)
+                            .font(cookMode ? .system(size: 20 * cookModeFontSize) : .appBody)
 
                         Text(ingredientDisplayText(ingredient))
-                            .font(cookMode ? .system(size: 16 * cookModeFontSize) : .appBody)
+                            .font(cookMode ? .system(size: 20 * cookModeFontSize) : .appBody)
                             .strikethrough(ingredient.isChecked)
                             .opacity(ingredient.isChecked ? 0.5 : 1)
                             .multilineTextAlignment(.leading)
@@ -785,6 +952,8 @@ struct ServingAdjusterView: View {
 
 #if os(macOS)
 struct UnitConverterView: View {
+    var servingMultiplier: Double = 1.0
+
     enum CUnit: String, CaseIterable, Identifiable {
         var id: String { rawValue }
         case g = "g", oz = "oz", lb = "lb", kg = "kg"
@@ -793,6 +962,7 @@ struct UnitConverterView: View {
 
         var isWeight: Bool { [.g, .oz, .lb, .kg].contains(self) }
 
+        // Weight: grams per unit. Volume: ml per unit.
         var toBase: Double {
             switch self {
             case .g:    return 1.0
@@ -817,22 +987,43 @@ struct UnitConverterView: View {
 
     @State private var inputText = "1"
     @State private var fromUnit: CUnit = .cup
-    @State private var toUnit: CUnit = .ml
+    @State private var toUnit: CUnit = .g
     @State private var showProUpgrade = false
+    @State private var ingredientQuery = ""
+    @State private var selectedIngredient: IngredientWeightEntry? = nil
+    @State private var suggestions: [IngredientWeightEntry] = []
 
-    private var canConvert: Bool { fromUnit.isWeight == toUnit.isWeight }
+    private var canConvert: Bool {
+        if fromUnit.isWeight == toUnit.isWeight { return true }
+        return selectedIngredient != nil
+    }
 
     private var result: String {
-        guard canConvert, let value = Double(inputText), value >= 0 else { return "—" }
-        let converted = value * fromUnit.toBase / toUnit.toBase
+        guard let value = Double(inputText), value >= 0 else { return "—" }
+        let converted: Double
+        if fromUnit.isWeight == toUnit.isWeight {
+            converted = value * fromUnit.toBase / toUnit.toBase
+        } else if let ing = selectedIngredient {
+            let gpml = ing.gramsPerMl
+            if !fromUnit.isWeight && toUnit.isWeight {
+                // volume → weight
+                converted = (value * fromUnit.toBase * gpml) / toUnit.toBase
+            } else {
+                // weight → volume
+                converted = (value * fromUnit.toBase / gpml) / toUnit.toBase
+            }
+        } else {
+            return "—"
+        }
         if converted == 0 { return "0" }
         if converted >= 100 { return String(format: "%.1f", converted) }
-        if converted >= 1  { return String(format: "%.2f", converted) }
+        if converted >= 1   { return String(format: "%.2f", converted) }
         return String(format: "%.4f", converted)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 16) {
+
             // Header
             HStack(spacing: 8) {
                 Image(systemName: "scalemass.fill")
@@ -876,8 +1067,94 @@ struct UnitConverterView: View {
                 .sheet(isPresented: $showProUpgrade) {
                     ProUpgradeSheet()
                 }
+
             } else {
-                // Input row
+
+                // Ingredient search for weight↔volume
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.appSubheadline)
+                        TextField("Search ingredient (e.g. flour, butter…)", text: $ingredientQuery)
+                            .onChange(of: ingredientQuery) { _, newVal in
+                                selectedIngredient = nil
+                                suggestions = newVal.count >= 2
+                                    ? IngredientWeightDatabase.suggestions(for: newVal)
+                                    : []
+                            }
+                        if !ingredientQuery.isEmpty {
+                            Button {
+                                ingredientQuery = ""
+                                selectedIngredient = nil
+                                suggestions = []
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    // Suggestions dropdown
+                    if !suggestions.isEmpty {
+                        VStack(spacing: 0) {
+                            ForEach(Array(suggestions.prefix(6)), id: \.name) { entry in
+                                Button {
+                                    selectedIngredient = entry
+                                    ingredientQuery = entry.name
+                                    suggestions = []
+                                } label: {
+                                    HStack {
+                                        Text(entry.name)
+                                            .font(.appSubheadline)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Text(String(format: "%.0fg / cup", entry.gramsPerMl * 236.588))
+                                            .font(.appCaption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 7)
+                                }
+                                .buttonStyle(.plain)
+                                .background(Color.clear)
+                                .onHover { inside in _ = inside }
+                                if entry.name != suggestions.prefix(6).last?.name {
+                                    Divider()
+                                }
+                            }
+                        }
+                        .background(.thickMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+                    }
+
+                    // Selected ingredient badge
+                    if let ing = selectedIngredient {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color("AccentGreen"))
+                                .font(.appCaption)
+                            Text(ing.name)
+                                .font(.appCaption.weight(.medium))
+                                .foregroundStyle(Color("AccentGreen"))
+                            Spacer()
+                            Text("Weight ↔ Volume enabled")
+                                .font(.appCaption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color("AccentGreen").opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+
+                // Converter row
                 HStack(spacing: 10) {
                     TextField("Amount", text: $inputText)
                         .textFieldStyle(.roundedBorder)
@@ -924,22 +1201,752 @@ struct UnitConverterView: View {
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
                     } else if !canConvert {
-                        Text("Can't convert between weight and volume")
+                        Text(fromUnit.isWeight != toUnit.isWeight
+                             ? "Search an ingredient above to convert weight ↔ volume"
+                             : "Enter a valid amount")
                             .font(.appCaption)
                             .foregroundStyle(Color("Terracotta"))
+                            .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, 14)
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                // Serving scale note
+                if servingMultiplier != 1.0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.appCaption2)
+                        Text("Recipe is scaled ×\(String(format: "%.2g", servingMultiplier)) — adjust your amounts accordingly")
+                            .font(.appCaption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(20)
-        .frame(width: 360)
+        .frame(width: 380)
     }
 }
 #endif
+
+// MARK: - My Recipe Intro Sheet
+
+struct MyRecipeIntroSheet: View {
+    let originalTitle: String
+    let onProceed: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 28) {
+                Spacer()
+
+                Image(systemName: "doc.badge.plus")
+                    .font(.system(size: 60))
+                    .foregroundStyle(Color("Terracotta"))
+
+                VStack(spacing: 12) {
+                    Text("Create My Recipe")
+                        .font(.title2.bold())
+                    Text("You're making **your own version** of \"\(originalTitle)\".")
+                        .font(.appBody)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                    Text("The original stays untouched. Your copy will be saved as \"My \(originalTitle)\" so you can freely change ingredients, servings, and instructions.")
+                        .font(.appSubheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 24)
+
+                Spacer()
+
+                Button {
+                    onProceed()
+                } label: {
+                    Text("Start Editing")
+                        .font(.appHeadline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color("Terracotta"))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 24)
+
+                Button("Cancel", role: .cancel) {
+                    dismiss()
+                }
+                .font(.appSubheadline)
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 12)
+            }
+            .padding(.top, 24)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Edit Recipe Sheet
+
+struct EditRecipeSheet: View {
+    enum Mode { case edit, copy }
+
+    struct DraftIngredient: Identifiable {
+        var id = UUID()
+        var amount: String
+        var unit: String
+        var name: String
+    }
+
+    struct DraftInstruction: Identifiable {
+        var id = UUID()
+        var text: String
+    }
+
+    struct Draft {
+        var title: String
+        var servings: Int?
+        var prepTime: String
+        var cookTime: String
+        var totalTime: String
+        var notes: String
+        var ingredients: [DraftIngredient]
+        var instructions: [String]
+    }
+
+    let recipe: Recipe
+    let mode: Mode
+    let onSave: (Draft) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title: String
+    @State private var servings: Int
+    @State private var prepTime: String
+    @State private var cookTime: String
+    @State private var totalTime: String
+    @State private var notes: String
+    @State private var ingredients: [DraftIngredient]
+    @State private var instructions: [DraftInstruction]
+
+    // macOS sidebar selection
+    #if os(macOS)
+    @State private var selectedSection: EditorSection? = .titleInfo
+    #endif
+
+    enum EditorSection: String, CaseIterable, Identifiable {
+        var id: String { rawValue }
+        case titleInfo    = "Title & Info"
+        case ingredients  = "Ingredients"
+        case instructions = "Instructions"
+        case notes        = "Notes"
+
+        var icon: String {
+            switch self {
+            case .titleInfo:    return "info.circle"
+            case .ingredients:  return "list.bullet"
+            case .instructions: return "number"
+            case .notes:        return "note.text"
+            }
+        }
+    }
+
+    /// Parse an amount string that may contain Unicode fractions or mixed numbers like "1½".
+    static func parseAmount(_ text: String) -> Double? {
+        let fractionMap: [Character: Double] = [
+            "½": 0.5, "⅓": 1.0/3, "⅔": 2.0/3, "¼": 0.25, "¾": 0.75,
+            "⅛": 0.125, "⅜": 0.375, "⅝": 0.625, "⅞": 0.875
+        ]
+        let s = text.trimmingCharacters(in: .whitespaces)
+        if s.isEmpty { return nil }
+        if let d = Double(s) { return d }
+        if let last = s.unicodeScalars.last.map({ Character($0) }),
+           let frac = fractionMap[last] {
+            let prefix = String(s.dropLast())
+            let whole = Double(prefix.trimmingCharacters(in: .whitespaces)) ?? 0
+            return whole + frac
+        }
+        return nil
+    }
+
+    init(recipe: Recipe, mode: Mode, onSave: @escaping (Draft) -> Void) {
+        self.recipe = recipe
+        self.mode = mode
+        self.onSave = onSave
+
+        let defaultTitle = mode == .copy
+            ? (recipe.title.hasPrefix("My ") ? recipe.title : "My \(recipe.title)")
+            : recipe.title
+        _title = State(initialValue: defaultTitle)
+        _servings = State(initialValue: recipe.servings ?? 4)
+        _prepTime = State(initialValue: recipe.prepTime ?? "")
+        _cookTime = State(initialValue: recipe.cookTime ?? "")
+        _totalTime = State(initialValue: recipe.totalTime ?? "")
+        _notes = State(initialValue: recipe.notes ?? "")
+        _ingredients = State(initialValue:
+            recipe.ingredients
+                .sorted { $0.sortOrder < $1.sortOrder }
+                .map { ing in
+                    DraftIngredient(
+                        amount: ing.amount.map { IngredientParser.scale(amount: $0, by: 1.0) } ?? "",
+                        unit: ing.unit ?? "",
+                        name: ing.name ?? ing.original
+                    )
+                }
+        )
+        _instructions = State(initialValue:
+            recipe.instructions
+                .sorted { $0.stepNumber < $1.stepNumber }
+                .map { DraftInstruction(text: $0.text) }
+        )
+    }
+
+    // MARK: - Save helper
+
+    private func performSave() {
+        let draft = Draft(
+            title: title.trimmingCharacters(in: .whitespaces).isEmpty
+                ? recipe.title : title.trimmingCharacters(in: .whitespaces),
+            servings: servings,
+            prepTime: prepTime.trimmingCharacters(in: .whitespaces),
+            cookTime: cookTime.trimmingCharacters(in: .whitespaces),
+            totalTime: totalTime.trimmingCharacters(in: .whitespaces),
+            notes: notes,
+            ingredients: ingredients,
+            instructions: instructions.map { $0.text }
+        )
+        onSave(draft)
+        dismiss()
+    }
+
+    // MARK: - Body
+
+    var body: some View {
+        #if os(macOS)
+        macBody
+        #else
+        iosBody
+        #endif
+    }
+
+    // MARK: - macOS: NavigationSplitView
+
+    #if os(macOS)
+    private var macBody: some View {
+        NavigationSplitView {
+            List(EditorSection.allCases, selection: $selectedSection) { section in
+                Label(section.rawValue, systemImage: section.icon)
+                    .tag(section)
+            }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 160, ideal: 180)
+        } detail: {
+            Group {
+                switch selectedSection ?? .titleInfo {
+                case .titleInfo:    macTitleInfoSection
+                case .ingredients:  macIngredientsSection
+                case .instructions: macInstructionsSection
+                case .notes:        macNotesSection
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .navigationTitle(mode == .copy ? "My Recipe" : "Edit Recipe")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(mode == .copy ? "Save Copy" : "Save") {
+                    performSave()
+                }
+                .foregroundStyle(Color("AccentGreen"))
+                .fontWeight(.semibold)
+            }
+        }
+        .frame(minWidth: 680, minHeight: 480)
+    }
+
+    // MARK: macOS detail sections
+
+    private var macTitleInfoSection: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                editorSectionHeader("Title & Info")
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recipe Title")
+                        .font(.appSubheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    TextField("Recipe title", text: $title)
+                        .font(.title2.bold())
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Servings")
+                        .font(.appSubheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Stepper(
+                        "\(servings) serving\(servings == 1 ? "" : "s")",
+                        value: $servings, in: 1...100
+                    )
+                    .font(.appBody)
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Times")
+                        .font(.appSubheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Prep Time").font(.appCaption).foregroundStyle(.secondary)
+                            TextField("e.g. 15 min", text: $prepTime)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 120)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Cook Time").font(.appCaption).foregroundStyle(.secondary)
+                            TextField("e.g. 30 min", text: $cookTime)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 120)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Total Time").font(.appCaption).foregroundStyle(.secondary)
+                            TextField("e.g. 45 min", text: $totalTime)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(minWidth: 120)
+                        }
+                    }
+                }
+            }
+            .padding(28)
+        }
+    }
+
+    private var macIngredientsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            editorSectionHeader("Ingredients")
+                .padding(.horizontal, 28)
+                .padding(.top, 28)
+                .padding(.bottom, 16)
+
+            List {
+                ForEach($ingredients) { $ing in
+                    HStack(spacing: 10) {
+                        TextField("Amount", text: $ing.amount)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+
+                        TextField("Unit", text: $ing.unit)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 90)
+
+                        TextField("Ingredient name", text: $ing.name)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: .infinity)
+
+                        Button {
+                            withAnimation {
+                                ingredients.removeAll { $0.id == ing.id }
+                            }
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(Color.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .onMove { from, to in
+                    ingredients.move(fromOffsets: from, toOffset: to)
+                }
+            }
+            .listStyle(.plain)
+
+            Divider()
+
+            Button {
+                withAnimation {
+                    ingredients.append(DraftIngredient(amount: "", unit: "", name: ""))
+                }
+            } label: {
+                Label("Add Ingredient", systemImage: "plus.circle.fill")
+                    .foregroundStyle(Color("AccentGreen"))
+                    .font(.appSubheadline.weight(.medium))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 14)
+        }
+    }
+
+    private var macInstructionsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            editorSectionHeader("Instructions")
+                .padding(.horizontal, 28)
+                .padding(.top, 28)
+                .padding(.bottom, 16)
+
+            List {
+                ForEach(Array($instructions.enumerated()), id: \.element.id) { index, $instr in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("\(index + 1)")
+                            .font(.appCaption.bold())
+                            .foregroundStyle(.white)
+                            .frame(width: 26, height: 26)
+                            .background(Color("AccentGreen").opacity(0.7))
+                            .clipShape(Circle())
+                            .padding(.top, 6)
+
+                        TextField("Step \(index + 1)…", text: $instr.text, axis: .vertical)
+                            .textFieldStyle(.roundedBorder)
+                            .lineLimit(2...8)
+                            .frame(maxWidth: .infinity)
+
+                        Button {
+                            withAnimation {
+                                instructions.removeAll { $0.id == instr.id }
+                            }
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(Color.red)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 4)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .onMove { from, to in
+                    instructions.move(fromOffsets: from, toOffset: to)
+                }
+            }
+            .listStyle(.plain)
+
+            Divider()
+
+            Button {
+                withAnimation {
+                    instructions.append(DraftInstruction(text: ""))
+                }
+            } label: {
+                Label("Add Step", systemImage: "plus.circle.fill")
+                    .foregroundStyle(Color("AccentGreen"))
+                    .font(.appSubheadline.weight(.medium))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 14)
+        }
+    }
+
+    private var macNotesSection: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                editorSectionHeader("Notes")
+
+                TextEditor(text: $notes)
+                    .font(.appBody)
+                    .frame(minHeight: 200)
+                    .padding(8)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
+                    )
+            }
+            .padding(28)
+        }
+    }
+
+    @ViewBuilder
+    private func editorSectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.title2.bold())
+    }
+    #endif
+
+    // MARK: - iOS: NavigationStack with tab-like section picker
+
+    #if os(iOS)
+    @State private var selectedSectioniOS: EditorSection = .titleInfo
+
+    private var iosBody: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Section picker
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(EditorSection.allCases) { section in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedSectioniOS = section
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: section.icon)
+                                        .font(.appCaption2)
+                                    Text(section.rawValue)
+                                        .font(.appCaption.weight(.medium))
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(
+                                    selectedSectioniOS == section
+                                        ? Color("AccentGreen")
+                                        : Color("AccentGreen").opacity(0.1)
+                                )
+                                .foregroundStyle(
+                                    selectedSectioniOS == section ? .white : Color("AccentGreen")
+                                )
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                .background(.ultraThinMaterial)
+
+                Divider()
+
+                // Content
+                ScrollView {
+                    switch selectedSectioniOS {
+                    case .titleInfo:    iosTitleInfoSection
+                    case .ingredients:  iosIngredientsSection
+                    case .instructions: iosInstructionsSection
+                    case .notes:        iosNotesSection
+                    }
+                }
+            }
+            .navigationTitle(mode == .copy ? "My Recipe" : "Edit Recipe")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(mode == .copy ? "Save Copy" : "Save") {
+                        performSave()
+                    }
+                    .foregroundStyle(Color("AccentGreen"))
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    // MARK: iOS detail sections
+
+    private var iosTitleInfoSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Recipe Title")
+                    .font(.appSubheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                TextField("Recipe title", text: $title)
+                    .font(.title3.bold())
+                    .padding(12)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Servings")
+                    .font(.appSubheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Stepper(
+                    "\(servings) serving\(servings == 1 ? "" : "s")",
+                    value: $servings, in: 1...100
+                )
+                .font(.appBody)
+                .padding(12)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Times")
+                    .font(.appSubheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+
+                VStack(spacing: 0) {
+                    timeRow(label: "Prep Time", placeholder: "e.g. 15 min", value: $prepTime)
+                    Divider().padding(.leading, 16)
+                    timeRow(label: "Cook Time", placeholder: "e.g. 30 min", value: $cookTime)
+                    Divider().padding(.leading, 16)
+                    timeRow(label: "Total Time", placeholder: "e.g. 45 min", value: $totalTime)
+                }
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+        .padding(16)
+    }
+
+    @ViewBuilder
+    private func timeRow(label: String, placeholder: String, value: Binding<String>) -> some View {
+        HStack {
+            Text(label)
+                .font(.appBody)
+            Spacer()
+            TextField(placeholder, text: value)
+                .font(.appBody)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 160)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private var iosIngredientsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach($ingredients) { $ing in
+                VStack(spacing: 8) {
+                    HStack(spacing: 10) {
+                        TextField("Amount", text: $ing.amount)
+                            .keyboardType(.decimalPad)
+                            .padding(10)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .frame(width: 90)
+
+                        TextField("Unit", text: $ing.unit)
+                            .padding(10)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .frame(width: 90)
+
+                        Button {
+                            withAnimation {
+                                ingredients.removeAll { $0.id == ing.id }
+                            }
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(Color.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    TextField("Ingredient name", text: $ing.name)
+                        .padding(10)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .padding(.horizontal, 16)
+            }
+
+            Button {
+                withAnimation {
+                    ingredients.append(DraftIngredient(amount: "", unit: "", name: ""))
+                }
+            } label: {
+                Label("Add Ingredient", systemImage: "plus.circle.fill")
+                    .foregroundStyle(Color("AccentGreen"))
+                    .font(.appSubheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color("AccentGreen").opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+
+            Text("Swipe a row left to delete, or tap the trash icon.")
+                .font(.appCaption2)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+        }
+        .padding(.vertical, 16)
+    }
+
+    private var iosInstructionsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array($instructions.enumerated()), id: \.element.id) { index, $instr in
+                HStack(alignment: .top, spacing: 12) {
+                    Text("\(index + 1)")
+                        .font(.appCaption.bold())
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(Color("AccentGreen").opacity(0.7))
+                        .clipShape(Circle())
+                        .padding(.top, 10)
+
+                    TextField("Step \(index + 1)…", text: $instr.text, axis: .vertical)
+                        .lineLimit(2...8)
+                        .padding(10)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .frame(maxWidth: .infinity)
+
+                    Button {
+                        withAnimation {
+                            instructions.removeAll { $0.id == instr.id }
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(Color.red)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 10)
+                }
+                .padding(.horizontal, 16)
+            }
+
+            Button {
+                withAnimation {
+                    instructions.append(DraftInstruction(text: ""))
+                }
+            } label: {
+                Label("Add Step", systemImage: "plus.circle.fill")
+                    .foregroundStyle(Color("AccentGreen"))
+                    .font(.appSubheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color("AccentGreen").opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+        }
+        .padding(.vertical, 16)
+    }
+
+    private var iosNotesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Notes")
+                .font(.appSubheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+
+            TextEditor(text: $notes)
+                .font(.appBody)
+                .frame(minHeight: 200)
+                .padding(10)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 16)
+        }
+        .padding(.vertical, 16)
+    }
+    #endif
+}
 
 // Simple flow layout for tags
 struct FlowLayout: Layout {

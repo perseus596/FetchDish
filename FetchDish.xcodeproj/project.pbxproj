@@ -14,6 +14,7 @@
 		0CC5CF52B03F9C69661BE0CC /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C07D885F0F16C9AD86A00E /* SplashView.swift */; };
 		0DDF7DBBE42540234A276A93 /* ManualRecipeEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D42FF980798ECBD7B85B0F /* ManualRecipeEntryView.swift */; };
 		0F166549BD62A2DC80C6942C /* RecipeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C771D6439E8CC0D70DF45E /* RecipeCardView.swift */; };
+		11F9A69B9120645097927AC8 /* IngredientWeightDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A7955B8526242E3AE7D02CF /* IngredientWeightDatabase.swift */; };
 		1C0578784A7864ADFCD2B11B /* ShoppingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3944969A0D8D20C2F71D2174 /* ShoppingListView.swift */; };
 		1CB91DA22FD620C603B97826 /* Recipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A4920008148DF85EB7A301 /* Recipe.swift */; };
 		210426F2DF7C59F6D6495080 /* RecipeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D7F3F6E738BA02ABB86AA0B /* RecipeParser.swift */; };
@@ -97,6 +98,7 @@
 /* Begin PBXFileReference section */
 		01E3831DD96C4AD5355E5426 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		028B5A80E162A9CE2FF7FCCD /* ExportImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportImportService.swift; sourceTree = "<group>"; };
+		0A7955B8526242E3AE7D02CF /* IngredientWeightDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientWeightDatabase.swift; sourceTree = "<group>"; };
 		0D1D5B958737B405E831EBCE /* FetchDishShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FetchDishShareExtension.entitlements; sourceTree = "<group>"; };
 		0E11C5741331DD10D7D05068 /* ShelfRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfRowView.swift; sourceTree = "<group>"; };
 		0FD6511FB0316C54AF262DA4 /* IngredientParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientParser.swift; sourceTree = "<group>"; };
@@ -141,7 +143,7 @@
 		91A029748017431EE636F73E /* HEAD */ = {isa = PBXFileReference; lastKnownFileType = text; path = HEAD; sourceTree = "<group>"; };
 		93E4A715F7BF5A0139A31760 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		9A09A3AD3C45BCFE3BB62F94 /* exclude */ = {isa = PBXFileReference; lastKnownFileType = text; path = exclude; sourceTree = "<group>"; };
-		A2DE96A54AE14ECAB56DD05A /* FetchDish.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FetchDish.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2DE96A54AE14ECAB56DD05A /* FetchDish.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FetchDish.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A30F5BE42B5B6F1F214C875E /* RecipePreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipePreviewSheet.swift; sourceTree = "<group>"; };
 		A69C2A7214D3ABE1DE332050 /* push-to-checkout.sample */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "push-to-checkout.sample"; sourceTree = "<group>"; };
 		AA219F3B4C5D71140DC60E24 /* ProStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStatus.swift; sourceTree = "<group>"; };
@@ -377,6 +379,7 @@
 				028B5A80E162A9CE2FF7FCCD /* ExportImportService.swift */,
 				E080B7AFE27955EAFB129720 /* IngredientCategorizer.swift */,
 				0FD6511FB0316C54AF262DA4 /* IngredientParser.swift */,
+				0A7955B8526242E3AE7D02CF /* IngredientWeightDatabase.swift */,
 				1D7F3F6E738BA02ABB86AA0B /* RecipeParser.swift */,
 				B189B4CF1871A3048D5DB89B /* SharedModelContainer.swift */,
 			);
@@ -455,6 +458,7 @@
 				BBE65F00AF3E4EAC4FE12707 /* Components */,
 				451D70312C435CFCB85F3DAD /* Import */,
 				41615AA9A608EEB22BF9CCF4 /* Library */,
+				BB027257D8E2958E9FBE465B /* Mac */,
 				9792860CD479A8BD220FFC52 /* Menu */,
 				D08E58168F746F54FE01895B /* Profile */,
 				331642569A3B71DCCBEFFB59 /* Recipe */,
@@ -508,6 +512,13 @@
 				91A029748017431EE636F73E /* HEAD */,
 			);
 			path = logs;
+			sourceTree = "<group>";
+		};
+		BB027257D8E2958E9FBE465B /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Mac;
 			sourceTree = "<group>";
 		};
 		BBE65F00AF3E4EAC4FE12707 /* Components */ = {
@@ -643,6 +654,7 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					9B0FE5D13FF97EF1BD13BF56 = {
+						DevelopmentTeam = VPM9NGP3JW;
 						ProvisioningStyle = Automatic;
 					};
 					E694CD4BB4616F3D1F78D976 = {
@@ -712,6 +724,7 @@
 				EEBEA275FA4D77E2191E7B10 /* ImportView.swift in Sources */,
 				24C5322E40DAEFA272C8F11A /* IngredientCategorizer.swift in Sources */,
 				8B74EC9FDAE34CBAAF17A2BD /* IngredientParser.swift in Sources */,
+				11F9A69B9120645097927AC8 /* IngredientWeightDatabase.swift in Sources */,
 				F5A3BD97C7DCDF1FD873D18C /* LibraryView.swift in Sources */,
 				636FE3564312CFC4716B2DF2 /* MainMenuView.swift in Sources */,
 				0DDF7DBBE42540234A276A93 /* ManualRecipeEntryView.swift in Sources */,
@@ -782,7 +795,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fetchdish.app.ShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.paczka.fetchdish.app.ShareExtension;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -858,7 +871,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 3UZTF9DZ8J;
+				DEVELOPMENT_TEAM = VPM9NGP3JW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FetchDish;
@@ -872,8 +885,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fetchdish.app;
-				REGISTER_APP_GROUPS = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.paczka.fetchdish.app;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -892,7 +904,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 3UZTF9DZ8J;
+				DEVELOPMENT_TEAM = VPM9NGP3JW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FetchDish;
@@ -906,8 +918,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fetchdish.app;
-				REGISTER_APP_GROUPS = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.paczka.fetchdish.app;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -933,7 +944,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fetchdish.app.ShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.paczka.fetchdish.app.ShareExtension;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

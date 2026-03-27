@@ -8,7 +8,7 @@ enum ProStatus {
     static let freeRecipeLimit = 25
 
     static var isPro: Bool {
-        get { UserDefaults.standard.bool(forKey: "isPro") }
+        get { true } // DEV MODE: always Pro — revert before App Store submission
         set { UserDefaults.standard.set(newValue, forKey: "isPro") }
     }
 

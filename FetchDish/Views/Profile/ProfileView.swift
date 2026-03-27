@@ -472,14 +472,16 @@ struct ProfileView: View {
             }
             try? modelContext.save()
         }
-        if dietaryPrefs.isEmpty {
-            let defaults = [
-                "Vegan", "Vegetarian", "Pescatarian", "Plant-Based",
-                "Keto", "Paleo", "Whole30", "Low-Carb", "Mediterranean",
-                "Gluten-Free", "Dairy-Free", "Nut-Free", "Sugar-Free",
-                "Halal", "Kosher", "Carnivore", "Raw Food", "Other"
-            ]
-            for name in defaults {
+        let allDefaults = [
+            "Vegan", "Vegetarian", "Pescatarian", "Plant-Based",
+            "Keto", "Paleo", "Whole30", "Low-Carb", "Mediterranean",
+            "Gluten-Free", "Dairy-Free", "Nut-Free", "Sugar-Free",
+            "Halal", "Kosher", "Carnivore", "Raw Food", "Other"
+        ]
+        let existingNames = Set(dietaryPrefs.map { $0.name })
+        let missing = allDefaults.filter { !existingNames.contains($0) }
+        if !missing.isEmpty {
+            for name in missing {
                 modelContext.insert(UserDietaryPreference(name: name, isActive: false))
             }
             try? modelContext.save()

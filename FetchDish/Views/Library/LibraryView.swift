@@ -72,6 +72,19 @@ struct LibraryView: View {
         Group {
             if recipes.isEmpty {
                 emptyState
+                    #if os(macOS)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        ZStack {
+                            Image("ProfileShelvesBackground")
+                                .resizable()
+                                .scaledToFill()
+                            Color.black.opacity(0.45)
+                        }
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                    )
+                    #endif
             } else {
                 shelfLibrary
             }
@@ -90,6 +103,7 @@ struct LibraryView: View {
                     } label: {
                         Text(isEditing ? "Done" : "Edit")
                             .fontWeight(isEditing ? .semibold : .regular)
+                            .foregroundStyle(Color("AccentGreen"))
                     }
                 }
             }
@@ -213,16 +227,24 @@ struct LibraryView: View {
         }
         .scrollContentBackground(.hidden)
         .background(
-            shelfBackground
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            ZStack {
+                Image("ProfileShelvesBackground")
+                    .resizable()
+                    .scaledToFill()
+                #if os(macOS)
+                Color.black.opacity(0.45)
+                #else
+                shelfBackground.opacity(0.85)
+                #endif
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
         )
         #if os(iOS)
         .toolbarBackground(shelfBackground, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         #elseif os(macOS)
         .toolbarBackground(shelfBackground, for: .windowToolbar)
-        .toolbarColorScheme(.light, for: .windowToolbar)
         #endif
     }
 
