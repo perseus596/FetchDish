@@ -38,24 +38,52 @@ struct RecipeDetailView: View {
     // MARK: - Auto-scroll state
     @State private var autoScrollPlaying = false
     @State private var autoScrollSpeed: Int = 2          // 0…4
-    @State private var autoScrollIndex: Int = 0
     @State private var autoScrollTimer: Timer? = nil
-    private static let autoScrollAnchorCount = 500
-    private static let autoScrollBottomID = "autoScrollBottom"
+    @State private var scrollOffset: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
 
-    // Speed table: (timerInterval, pointsPerTick)
-    private static let speedTable: [(interval: Double, points: Double)] = [
-        (0.05, 2),
-        (0.04, 3),
-        (0.03, 5),
-        (0.02, 6),
-        (0.01, 8)
-    ]
+    // Points-per-tick at a fixed 0.016 s interval (~60 fps)
+    private static let speedPoints: [CGFloat] = [0.5, 1.0, 1.8, 2.8, 4.0]
     #if canImport(UIKit)
     @State private var decodedImage: UIImage?
     #else
     @State private var decodedImage: NSImage?
     #endif
+
+    @ViewBuilder
+    private var cookModeButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                cookMode.toggle()
+            }
+            if cookMode {
+                #if canImport(UIKit)
+                UIApplication.shared.isIdleTimerDisabled = true
+                #endif
+            } else {
+                #if canImport(UIKit)
+                UIApplication.shared.isIdleTimerDisabled = false
+                #endif
+                activeStep = nil
+            }
+            HapticManager.medium()
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: cookMode ? "flame.fill" : "flame")
+                Text(cookMode ? "Cooking" : "Cook")
+                    .font(.system(size: 9))
+            }
+            .foregroundStyle(cookMode ? Color("Terracotta") : .primary)
+        }
+        .popover(isPresented: $showCookModeTip, arrowEdge: .top) {
+            Text("**Cook Mode** — keeps your screen on and enlarges text while you cook")
+                .font(.appSubheadline)
+                .padding()
+                .frame(width: 220)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
 
     var body: some View {
         Group {
@@ -81,12 +109,10 @@ struct RecipeDetailView: View {
 
     // MARK: - Main Content
 
+    // MARK: - Cook mode content builder (shared VStack body)
     @ViewBuilder
-    private func recipeContent(_ recipe: Recipe) -> some View {
-        ScrollViewReader { proxy in
-        ZStack(alignment: .bottom) {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+    private func recipeBodyContent(_ recipe: Recipe) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
                 // Hero image
                 if let imageData = recipe.imageData {
                     recipeImage(imageData)
@@ -345,61 +371,104 @@ struct RecipeDetailView: View {
                         .padding(.horizontal)
                     }
 
-                    Spacer(minLength: cookMode ? 140 : 100)
-                    Color.clear.frame(height: 0).id(Self.autoScrollBottomID)
+                    Spacer(minLength: 100)
                 }
             }
-            .background(
-                GeometryReader { geo in
-                    if cookMode {
-                        ZStack {
-                            ForEach(0..<Self.autoScrollAnchorCount, id: \.self) { i in
-                                Color.clear
-                                    .frame(width: 1, height: 1)
-                                    .id(i)
-                                    .position(
-                                        x: 1,
-                                        y: geo.size.height * CGFloat(i) / CGFloat(Self.autoScrollAnchorCount - 1)
-                                    )
-                            }
+    } // recipeBodyContent
+
+    @ViewBuilder
+    private func recipeContent(_ recipe: Recipe) -> some View {
+        GeometryReader { viewportGeo in
+            if cookMode {
+                // MARK: Cook mode — true smooth pixel scrolling via .offset
+                recipeBodyContent(recipe)
+                    .background(
+                        GeometryReader { contentGeo in
+                            Color.clear
+                                .onAppear {
+                                    contentHeight = contentGeo.size.height
+                                    viewportHeight = viewportGeo.size.height
+                                }
+                                .onChange(of: contentGeo.size.height) { _, h in
+                                    contentHeight = h
+                                }
                         }
+                    )
+                    .offset(y: -scrollOffset)
+                    .frame(width: viewportGeo.size.width, alignment: .top)
+                    .clipped()
+                    .onAppear {
+                        viewportHeight = viewportGeo.size.height
                     }
+            } else {
+                // MARK: Normal mode — standard ScrollView
+                ScrollView {
+                    recipeBodyContent(recipe)
                 }
-            )
-        } // ScrollView
-        // Cook mode auto-scroll control bar
-        if cookMode {
-            CookModeScrollBar(
-                isPlaying: $autoScrollPlaying,
-                speed: $autoScrollSpeed
-            )
-            .onChange(of: autoScrollPlaying) { _, playing in
-                if playing {
-                    startAutoScroll(proxy: proxy)
-                } else {
-                    stopAutoScroll()
-                }
-            }
-            .onChange(of: autoScrollSpeed) { _, _ in
-                if autoScrollPlaying {
-                    stopAutoScroll()
-                    startAutoScroll(proxy: proxy)
+                .onAppear {
+                    viewportHeight = viewportGeo.size.height
                 }
             }
         }
-        } // ZStack
         .onChange(of: cookMode) { _, active in
+            scrollOffset = 0
             if !active {
                 stopAutoScroll()
                 autoScrollPlaying = false
-                autoScrollIndex = 0
             }
         }
-        } // ScrollViewReader
+        .onChange(of: autoScrollPlaying) { _, playing in
+            if playing {
+                startAutoScroll()
+            } else {
+                stopAutoScroll()
+            }
+        }
+        .onChange(of: autoScrollSpeed) { _, _ in
+            if autoScrollPlaying {
+                stopAutoScroll()
+                startAutoScroll()
+            }
+        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .toolbar {
+            // CENTER: Cook button always; auto-scroll controls appear next to it when cook mode is active
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 12) {
+                    cookModeButton
+
+                    if cookMode {
+                        // Play / Pause
+                        Button {
+                            autoScrollPlaying.toggle()
+                        } label: {
+                            Image(systemName: autoScrollPlaying ? "pause.fill" : "play.fill")
+                                .font(.title2.weight(.semibold))
+                                .foregroundStyle(autoScrollPlaying ? Color("Terracotta") : Color("AccentGreen"))
+                        }
+
+                        // Speed slider (tortoise → hare)
+                        HStack(spacing: 6) {
+                            Image(systemName: "tortoise")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                            Slider(value: Binding(
+                                get: { Double(autoScrollSpeed) },
+                                set: { autoScrollSpeed = Int($0.rounded()) }
+                            ), in: 0...4, step: 1)
+                            .tint(Color("AccentGreen"))
+                            .frame(minWidth: 150)
+                            Image(systemName: "hare")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            // RIGHT: Convert button (macOS) + Actions menu
             ToolbarItemGroup(placement: .primaryAction) {
                 #if os(macOS)
                 // Unit converter
@@ -416,38 +485,6 @@ struct RecipeDetailView: View {
                     UnitConverterView(servingMultiplier: servingMultiplier)
                 }
                 #endif
-
-                // Cook mode toggle
-                Button {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        cookMode.toggle()
-                    }
-                    if cookMode {
-                        #if canImport(UIKit)
-                        UIApplication.shared.isIdleTimerDisabled = true
-                        #endif
-                    } else {
-                        #if canImport(UIKit)
-                        UIApplication.shared.isIdleTimerDisabled = false
-                        #endif
-                        activeStep = nil
-                    }
-                    HapticManager.medium()
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: cookMode ? "flame.fill" : "flame")
-                        Text(cookMode ? "Cooking" : "Cook")
-                            .font(.system(size: 9))
-                    }
-                    .foregroundStyle(cookMode ? Color("Terracotta") : .primary)
-                }
-                .popover(isPresented: $showCookModeTip, arrowEdge: .top) {
-                    Text("**Cook Mode** — keeps your screen on and enlarges text while you cook")
-                        .font(.appSubheadline)
-                        .padding()
-                        .frame(width: 220)
-                        .presentationCompactAdaptation(.popover)
-                }
 
                 // Actions menu
                 Menu {
@@ -524,6 +561,7 @@ struct RecipeDetailView: View {
         }
         .animation(.easeInOut, value: showToast)
         .onDisappear {
+            stopAutoScroll()
             #if canImport(UIKit)
             UIApplication.shared.isIdleTimerDisabled = false
             #endif
@@ -557,33 +595,21 @@ struct RecipeDetailView: View {
 
     // MARK: - Auto-scroll helpers
 
-    private func startAutoScroll(proxy: ScrollViewProxy) {
-        let config = Self.speedTable[autoScrollSpeed]
-        let anchorCount = Self.autoScrollAnchorCount
-        // virtualPosition tracks progress through the content (0…10000).
-        // It is captured by value in the timer closure and mutated each tick.
-        var virtualPosition: Double = Double(autoScrollIndex) * (10000.0 / Double(anchorCount))
-        var lastIndex = autoScrollIndex
+    private func startAutoScroll() {
+        stopAutoScroll()
+        let safeIndex = max(0, min(autoScrollSpeed, Self.speedPoints.count - 1))
+        let points = Self.speedPoints[safeIndex]
+        let interval: TimeInterval = 1.0 / 60.0  // ~60 fps
 
-        let timer = Timer(timeInterval: config.interval, repeats: true) { _ in
-            virtualPosition += config.points
-            let maxVirtual = 10000.0
-            if virtualPosition >= maxVirtual {
-                virtualPosition = 0
-                lastIndex = 0
-                autoScrollIndex = 0
-                withAnimation(.linear(duration: config.interval)) {
-                    proxy.scrollTo(0, anchor: .top)
-                }
-                return
+        let timer = Timer(timeInterval: interval, repeats: true) { _ in
+            let maxOffset = max(0, contentHeight - viewportHeight)
+            guard maxOffset > 0 else { return }
+            var next = scrollOffset + points
+            if next >= maxOffset {
+                // Loop back to top
+                next = 0
             }
-            let newIndex = Int(virtualPosition / maxVirtual * Double(anchorCount))
-            guard newIndex != lastIndex else { return }
-            lastIndex = newIndex
-            autoScrollIndex = newIndex
-            withAnimation(.linear(duration: config.interval)) {
-                proxy.scrollTo(newIndex, anchor: .top)
-            }
+            scrollOffset = next
         }
         RunLoop.main.add(timer, forMode: .common)
         autoScrollTimer = timer
@@ -828,17 +854,24 @@ struct RecipeDetailView: View {
             return AttributedString(text)
         }
 
-        // Bold the amount and unit
+        // Choose font based on cook mode
+        let quantityFont: Font = cookMode
+            ? .system(size: 20 * cookModeFontSize, weight: .bold)
+            : .appBody.bold()
+
+        // Bold the amount and unit, colored AccentGreen
         var result = AttributedString()
         if let amount = ingredient.amount {
             var amountStr = AttributedString(IngredientParser.scale(amount: amount, by: 1.0))
-            amountStr.font = .appBody.bold()
+            amountStr.font = quantityFont
+            amountStr.foregroundColor = Color("AccentGreen")
             result.append(amountStr)
             result.append(AttributedString(" "))
         }
         if let unit = ingredient.unit {
             var unitStr = AttributedString(unit)
-            unitStr.font = .appBody.bold()
+            unitStr.font = quantityFont
+            unitStr.foregroundColor = Color("AccentGreen")
             result.append(unitStr)
             result.append(AttributedString(" "))
         }
@@ -886,6 +919,8 @@ struct RecipeDetailView: View {
                         Text(instruction.text)
                             .font(cookMode ? .system(size: 16 * cookModeFontSize) : .appBody)
                             .multilineTextAlignment(.leading)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
                             .opacity(instruction.isCompleted ? 0.5 : 1)
                     }
                     .padding(12)
@@ -976,48 +1011,6 @@ struct RecipeDetailView: View {
 }
 
 // MARK: - Supporting Views
-
-struct CookModeScrollBar: View {
-    @Binding var isPlaying: Bool
-    @Binding var speed: Int   // 0 (slow) … 4 (fast)
-
-    var body: some View {
-        HStack(spacing: 16) {
-            Button {
-                isPlaying.toggle()
-            } label: {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(isPlaying ? Color("Terracotta") : Color("AccentGreen"))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-
-            HStack(spacing: 8) {
-                Image(systemName: "tortoise")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Slider(value: Binding(
-                    get: { Double(speed) },
-                    set: { speed = Int($0.rounded()) }
-                ), in: 0...4, step: 1)
-                .tint(Color("AccentGreen"))
-                Image(systemName: "hare")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 20)
-    }
-}
 
 struct NutritionBadge: View {
     let label: String

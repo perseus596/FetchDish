@@ -36,7 +36,14 @@
       "Bash(git -C /Users/Ferenc/Documents/FETCHDISH status --short)",
       "Bash(git -C /Users/Ferenc/Documents/FETCHDISH show HEAD:FetchDish/Views/Mac/MacRootView.swift)",
       "Bash(git -C /Users/Ferenc/Documents/FETCHDISH diff HEAD -- FetchDish/FetchDishApp.swift)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:www.paprikaapp.com)",
+      "WebFetch(domain:hacknicity.com)",
+      "WebFetch(domain:www.macstories.net)",
+      "WebFetch(domain:crouton.app)",
+      "WebFetch(domain:www.sidechef.com)",
+      "WebFetch(domain:thesweetsetup.com)"
     ]
   }
 }
