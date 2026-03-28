@@ -7,6 +7,7 @@
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.paczka.fetchdish.app</string>
+		<string>group.com.fetchdish.app</string>
 	</array>
 	<key>com.apple.security.network.client</key>
 	<true/>

@@ -20,6 +20,7 @@ struct RecipeDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var toastMessage = ""
     @State private var showToast = false
+    @State private var timerManager = CookTimerManager()
 
     @State private var shoppingVM = ShoppingListViewModel()
     @State private var showGoToShoppingList = false
@@ -42,6 +43,9 @@ struct RecipeDetailView: View {
     @State private var scrollOffset: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var viewportHeight: CGFloat = 0
+    // Tracks scrollOffset at the moment a manual drag gesture begins so we can
+    // compute the new offset from the gesture's cumulative translation correctly.
+    @State private var dragStartScrollOffset: CGFloat = 0
 
     // Points-per-tick at a fixed 0.016 s interval (~60 fps)
     private static let speedPoints: [CGFloat] = [0.5, 1.0, 1.8, 2.8, 4.0]
@@ -66,6 +70,7 @@ struct RecipeDetailView: View {
                 UIApplication.shared.isIdleTimerDisabled = false
                 #endif
                 activeStep = nil
+                timerManager.removeAll()
             }
             HapticManager.medium()
         } label: {
@@ -86,12 +91,25 @@ struct RecipeDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if let recipe {
-                recipeContent(recipe)
-            } else {
-                ContentUnavailableView("Recipe not found", systemImage: "exclamationmark.triangle")
+        ZStack {
+            Group {
+                if let recipe {
+                    recipeContent(recipe)
+                } else {
+                    ContentUnavailableView("Recipe not found", systemImage: "exclamationmark.triangle")
+                }
             }
+
+            // Timer sidebar lives at the outermost ZStack layer so it is
+            // never clipped or zero-sized by the inner GeometryReader.
+            // Visible in cook mode on both iOS and macOS.
+            if cookMode, let recipe {
+                CookModeTimerSidebar(recipe: recipe, timerManager: timerManager)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .allowsHitTesting(true)
+                    .zIndex(999)
+            }
+
         }
         .onAppear {
             loadRecipe()
@@ -380,26 +398,62 @@ struct RecipeDetailView: View {
     private func recipeContent(_ recipe: Recipe) -> some View {
         GeometryReader { viewportGeo in
             if cookMode {
-                // MARK: Cook mode — true smooth pixel scrolling via .offset
-                recipeBodyContent(recipe)
-                    .background(
-                        GeometryReader { contentGeo in
-                            Color.clear
-                                .onAppear {
-                                    contentHeight = contentGeo.size.height
-                                    viewportHeight = viewportGeo.size.height
+                // MARK: Cook mode — smooth pixel scrolling via .offset
+                // Bug 1 fix: give the clipping container an explicit height matching the
+                // viewport so SwiftUI's hit-test frame is the full visible area. Without a
+                // height the frame collapses and swallows button taps inside the content.
+                ZStack(alignment: .topTrailing) {
+                    recipeBodyContent(recipe)
+                        .background(
+                            GeometryReader { contentGeo in
+                                Color.clear
+                                    .onAppear {
+                                        contentHeight = contentGeo.size.height
+                                        viewportHeight = viewportGeo.size.height
+                                    }
+                                    .onChange(of: contentGeo.size.height) { _, h in
+                                        contentHeight = h
+                                    }
+                            }
+                        )
+                        .offset(y: -scrollOffset)
+                        // Bug 1 fix: explicit width AND height so hit-testing covers the full
+                        // viewport and inner Buttons receive taps correctly.
+                        .frame(width: viewportGeo.size.width, height: viewportGeo.size.height, alignment: .top)
+                        .clipped()
+                        // Bug 1 fix: use simultaneousGesture for manual drag so it does NOT
+                        // cancel tap gestures on child Button views.
+                        // DragGesture.translation is cumulative from gesture start, so we
+                        // capture dragStartScrollOffset on the first onChanged call (when
+                        // the translation is still very small) and compute the new offset
+                        // relative to that baseline on each subsequent call.
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 10)
+                                .onChanged { value in
+                                    // Capture baseline when translation is near zero (gesture start)
+                                    if abs(value.translation.height) <= 12 && abs(value.translation.width) <= 12 {
+                                        dragStartScrollOffset = scrollOffset
+                                    }
+                                    let maxOffset = max(0, contentHeight - viewportHeight)
+                                    let next = (dragStartScrollOffset - value.translation.height)
+                                        .clamped(to: 0...max(0, maxOffset))
+                                    scrollOffset = next
+                                    // Do NOT pause auto-scroll — allow manual drag and auto-scroll simultaneously
                                 }
-                                .onChange(of: contentGeo.size.height) { _, h in
-                                    contentHeight = h
-                                }
+                        )
+                        .onAppear {
+                            viewportHeight = viewportGeo.size.height
                         }
+
+                    // Bug 3 fix: custom scroll indicator — a thin bar on the right edge that
+                    // reflects the current scroll position within the content.
+                    // The indicator is interactive: dragging it scrolls the content directly.
+                    CookModeScrollIndicator(
+                        scrollOffset: $scrollOffset,
+                        contentHeight: contentHeight,
+                        viewportHeight: viewportGeo.size.height
                     )
-                    .offset(y: -scrollOffset)
-                    .frame(width: viewportGeo.size.width, alignment: .top)
-                    .clipped()
-                    .onAppear {
-                        viewportHeight = viewportGeo.size.height
-                    }
+                }
             } else {
                 // MARK: Normal mode — standard ScrollView
                 ScrollView {
@@ -890,38 +944,48 @@ struct RecipeDetailView: View {
                 .padding(.horizontal)
 
             ForEach(recipe.instructions.sorted(by: { $0.stepNumber < $1.stepNumber })) { instruction in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        if activeStep == instruction.stepNumber {
-                            activeStep = nil
-                            instruction.isCompleted = true
-                        } else {
-                            activeStep = instruction.stepNumber
-                        }
-                        try? modelContext.save()
-                    }
-                    HapticManager.selection()
-                } label: {
+                // In cook mode the row is split: the step-circle tap area marks the step
+                // done, while the text content (with tappable timer chips) is non-tappable
+                // at the outer level so inner Button taps are forwarded correctly.
+                if cookMode {
                     HStack(alignment: .top, spacing: 12) {
-                        Text("\(instruction.stepNumber)")
-                            .font(.appCaption.bold())
-                            .foregroundStyle(.white)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                activeStep == instruction.stepNumber
-                                    ? Color("AccentGreen")
-                                    : instruction.isCompleted
-                                        ? Color.gray
-                                        : Color("AccentGreen").opacity(0.4)
-                            )
-                            .clipShape(Circle())
+                        // Step circle — tappable to mark complete
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                if activeStep == instruction.stepNumber {
+                                    activeStep = nil
+                                    instruction.isCompleted = true
+                                } else {
+                                    activeStep = instruction.stepNumber
+                                }
+                                try? modelContext.save()
+                            }
+                            HapticManager.selection()
+                        } label: {
+                            Text("\(instruction.stepNumber)")
+                                .font(.appCaption.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    activeStep == instruction.stepNumber
+                                        ? Color("AccentGreen")
+                                        : instruction.isCompleted
+                                            ? Color.gray
+                                            : Color("AccentGreen").opacity(0.4)
+                                )
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
 
+                        // Instruction text — plain, no chips
                         Text(instruction.text)
-                            .font(cookMode ? .system(size: 16 * cookModeFontSize) : .appBody)
+                            .font(.system(size: 16 * cookModeFontSize))
                             .multilineTextAlignment(.leading)
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
                             .opacity(instruction.isCompleted ? 0.5 : 1)
+
+                        Spacer(minLength: 0)
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -931,9 +995,53 @@ struct RecipeDetailView: View {
                             : Color.clear
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal)
+                } else {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if activeStep == instruction.stepNumber {
+                                activeStep = nil
+                                instruction.isCompleted = true
+                            } else {
+                                activeStep = instruction.stepNumber
+                            }
+                            try? modelContext.save()
+                        }
+                        HapticManager.selection()
+                    } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(instruction.stepNumber)")
+                                .font(.appCaption.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    activeStep == instruction.stepNumber
+                                        ? Color("AccentGreen")
+                                        : instruction.isCompleted
+                                            ? Color.gray
+                                            : Color("AccentGreen").opacity(0.4)
+                                )
+                                .clipShape(Circle())
+
+                            Text(instruction.text)
+                                .font(.appBody)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .opacity(instruction.isCompleted ? 0.5 : 1)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            activeStep == instruction.stepNumber
+                                ? Color("AccentGreen").opacity(0.08)
+                                : Color.clear
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal)
             }
         }
     }
@@ -1085,6 +1193,93 @@ struct ServingAdjusterView: View {
         .padding(12)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+// MARK: - Cook Mode Scroll Indicator (Bug 3 fix)
+// An interactive scroll bar on the right edge in cook mode.
+// The user can drag the capsule thumb to scroll the recipe content directly.
+// Works with both touch drag (iOS/iPadOS) and mouse drag (macOS).
+
+struct CookModeScrollIndicator: View {
+    @Binding var scrollOffset: CGFloat
+    let contentHeight: CGFloat
+    let viewportHeight: CGFloat
+
+    /// True while the user is actively dragging the thumb.
+    @State private var isDragging = false
+    /// The scrollOffset value captured at the very start of the drag gesture.
+    @State private var dragStartOffset: CGFloat = 0
+
+    // Maximum scrollable distance in the content.
+    private var maxScroll: CGFloat { max(0, contentHeight - viewportHeight) }
+
+    // Proportional thumb height — at least 40 pt.
+    private var thumbHeight: CGFloat {
+        guard contentHeight > 0 else { return 40 }
+        return max(40, viewportHeight * viewportHeight / contentHeight)
+    }
+
+    // The usable track length for the thumb to travel.
+    private var trackHeight: CGFloat { max(0, viewportHeight - thumbHeight) }
+
+    // Current thumb top position within the track.
+    private var thumbY: CGFloat {
+        guard maxScroll > 0 else { return 0 }
+        return (scrollOffset / maxScroll * trackHeight).clamped(to: 0...trackHeight)
+    }
+
+    var body: some View {
+        // Only show indicator when content is taller than the viewport.
+        if maxScroll <= 0 {
+            EmptyView()
+        } else {
+            GeometryReader { _ in
+                // Thumb capsule positioned via offset so the hit-test frame stays
+                // exactly the thumb size and does not swallow the whole track.
+                Capsule()
+                    .fill(Color.white.opacity(isDragging ? 0.9 : 0.65))
+                    .frame(width: isDragging ? 14 : 12, height: thumbHeight)
+                    .offset(y: thumbY)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.trailing, 4)
+                    // Animate width/opacity on drag state change.
+                    .animation(.easeInOut(duration: 0.12), value: isDragging)
+                    // minimumDistance: 0 so the gesture fires immediately on touch/click
+                    // without requiring any movement threshold.
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                if !isDragging {
+                                    // Capture the baseline scrollOffset once at gesture start.
+                                    isDragging = true
+                                    dragStartOffset = scrollOffset
+                                }
+                                // Map thumb translation → content offset.
+                                // deltaThumb / trackHeight == deltaContent / maxScroll
+                                let scale: CGFloat = trackHeight > 0 ? maxScroll / trackHeight : 1
+                                let next = (dragStartOffset + value.translation.height * scale)
+                                    .clamped(to: 0...maxScroll)
+                                scrollOffset = next
+                            }
+                            .onEnded { _ in
+                                isDragging = false
+                            }
+                    )
+                    .allowsHitTesting(true)
+            }
+            // Fixed width so the GeometryReader doesn't expand over recipe content.
+            .frame(width: 20)
+            .allowsHitTesting(true)
+        }
+    }
+}
+
+// MARK: - Comparable clamping helper
+
+extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }
 

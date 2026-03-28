@@ -43,7 +43,9 @@
       "WebFetch(domain:www.macstories.net)",
       "WebFetch(domain:crouton.app)",
       "WebFetch(domain:www.sidechef.com)",
-      "WebFetch(domain:thesweetsetup.com)"
+      "WebFetch(domain:thesweetsetup.com)",
+      "Bash(find /System/Library/Audio -name *.caf)",
+      "Bash(md5 /Users/Ferenc/Documents/FETCHDISH/FetchDish/Views/Recipe/RecipeDetailView.swift)"
     ]
   }
 }
