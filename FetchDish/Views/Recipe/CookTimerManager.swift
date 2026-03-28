@@ -341,6 +341,13 @@ struct CookModeTimerSidebar: View {
     var body: some View {
         GeometryReader { geo in
             let currentOffsetY = CGFloat(storedOffsetY) + dragDeltaY
+            let cardWidth: CGFloat = 200
+            let cardHeight: CGFloat = 240
+            let cardX = geo.size.width - cardWidth / 2 - dialSize - 20
+            let cardYRaw = geo.size.height - cardHeight / 2 - 80
+            let cardY = min(max(cardYRaw, cardHeight / 2 + 20), geo.size.height - cardHeight / 2 - 20)
+
+            // Draggable sidebar (pills + "+" button)
             VStack(spacing: 10) {
                 ForEach($pills) { $pill in
                     pillView(pill: $pill)
@@ -377,12 +384,6 @@ struct CookModeTimerSidebar: View {
                     }
                 }
                 .buttonStyle(.plain)
-
-                // Custom timer input card
-                if showCustomTimerInput {
-                    customTimerCard
-                        .transition(.scale(scale: 0.85).combined(with: .opacity))
-                }
             }
             .frame(width: dialSize + 8)
             .position(
@@ -399,6 +400,15 @@ struct CookModeTimerSidebar: View {
                         dragDeltaY = 0
                     }
             )
+
+            // Custom timer input card — anchored to bottom-left of sidebar, never off-screen
+            if showCustomTimerInput {
+                customTimerCard
+                    .fixedSize()
+                    .position(x: cardX, y: cardY)
+                    .zIndex(100)
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {

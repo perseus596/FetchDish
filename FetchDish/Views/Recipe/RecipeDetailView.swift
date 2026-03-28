@@ -36,6 +36,13 @@ struct RecipeDetailView: View {
     @State private var showConverter = false
     #endif
 
+    // MARK: - Flame animation state
+    @State private var flameColorIndex: Int = 0
+    @State private var flameTimer: Timer? = nil
+    @State private var showSafetyAlert: Bool = false
+
+    private let flameColors: [Color] = [.red, .yellow, .blue]
+
     // MARK: - Auto-scroll state
     @State private var autoScrollPlaying = false
     @State private var autoScrollSpeed: Int = 2          // 0…4
@@ -65,21 +72,27 @@ struct RecipeDetailView: View {
                 #if canImport(UIKit)
                 UIApplication.shared.isIdleTimerDisabled = true
                 #endif
+                startFlameTimer()
             } else {
                 #if canImport(UIKit)
                 UIApplication.shared.isIdleTimerDisabled = false
                 #endif
                 activeStep = nil
                 timerManager.removeAll()
+                stopFlameTimer()
+                showSafetyAlert = true
             }
             HapticManager.medium()
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: cookMode ? "flame.fill" : "flame")
+                    .font(.system(size: 22))
+                    .foregroundStyle(cookMode ? flameColors[flameColorIndex] : .primary)
+                    .animation(.easeInOut(duration: 0.6), value: flameColorIndex)
                 Text(cookMode ? "Cooking" : "Cook")
-                    .font(.system(size: 9))
+                    .font(.system(size: 11))
             }
-            .foregroundStyle(cookMode ? Color("Terracotta") : .primary)
+            .foregroundStyle(cookMode ? flameColors[flameColorIndex] : .primary)
         }
         .popover(isPresented: $showCookModeTip, arrowEdge: .top) {
             Text("**Cook Mode** — keeps your screen on and enlarges text while you cook")
@@ -499,23 +512,23 @@ struct RecipeDetailView: View {
                             autoScrollPlaying.toggle()
                         } label: {
                             Image(systemName: autoScrollPlaying ? "pause.fill" : "play.fill")
-                                .font(.title2.weight(.semibold))
+                                .font(.system(size: 26, weight: .semibold))
                                 .foregroundStyle(autoScrollPlaying ? Color("Terracotta") : Color("AccentGreen"))
                         }
 
                         // Speed slider (tortoise → hare)
                         HStack(spacing: 6) {
                             Image(systemName: "tortoise")
-                                .font(.body)
+                                .font(.system(size: 18))
                                 .foregroundStyle(.secondary)
                             Slider(value: Binding(
                                 get: { Double(autoScrollSpeed) },
                                 set: { autoScrollSpeed = Int($0.rounded()) }
                             ), in: 0...4, step: 1)
                             .tint(Color("AccentGreen"))
-                            .frame(minWidth: 150)
+                            .frame(minWidth: 200)
                             Image(systemName: "hare")
-                                .font(.body)
+                                .font(.system(size: 18))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -601,6 +614,11 @@ struct RecipeDetailView: View {
         } message: {
             Text("This recipe will be permanently removed.")
         }
+        .alert("Safety Check 🔥", isPresented: $showSafetyAlert) {
+            Button("All clear, I checked!", role: .cancel) { }
+        } message: {
+            Text("Before you finish — please make sure all stoves, ovens, and burners are turned off. Safety first!")
+        }
         .overlay(alignment: .bottom) {
             if showToast {
                 ToastView(message: toastMessage)
@@ -672,6 +690,23 @@ struct RecipeDetailView: View {
     private func stopAutoScroll() {
         autoScrollTimer?.invalidate()
         autoScrollTimer = nil
+    }
+
+    // MARK: - Flame animation helpers
+
+    private func startFlameTimer() {
+        stopFlameTimer()
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { _ in
+            flameColorIndex = (flameColorIndex + 1) % 3
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        flameTimer = timer
+    }
+
+    private func stopFlameTimer() {
+        flameTimer?.invalidate()
+        flameTimer = nil
+        flameColorIndex = 0
     }
 
     // MARK: - Subviews
