@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct ImportView: View {
     @Environment(\.modelContext) private var modelContext
@@ -54,6 +55,11 @@ struct ImportView: View {
                             .onSubmit {
                                 Task { await viewModel.importRecipe() }
                             }
+                            .onChange(of: viewModel.urlText) {
+                                if viewModel.showPinterestTip {
+                                    viewModel.showPinterestTip = false
+                                }
+                            }
                     }
                     .padding(14)
                     .background(.ultraThinMaterial)
@@ -96,6 +102,16 @@ struct ImportView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .disabled(viewModel.isLoading || viewModel.urlText.isEmpty)
                 .padding(.horizontal)
+
+                // Pinterest tip image
+                if viewModel.showPinterestTip {
+                    Image("PinterestTip")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                }
 
                 // Error message
                 if let error = viewModel.errorMessage {
@@ -187,11 +203,13 @@ struct ImportView: View {
         }
         .fileImporter(
             isPresented: $showFileImporter,
-            allowedContentTypes: [.plainText, .rtf, .pdf, .data]
+            allowedContentTypes: [.json, .plainText, .rtf, .pdf]
         ) { result in
             switch result {
             case .success(let url):
-                importRecipes(from: url)
+                Task { @MainActor in
+                    importRecipes(from: url)
+                }
             case .failure(let error):
                 toastMessage = "Import failed: \(error.localizedDescription)"
                 showToast = true
@@ -214,6 +232,7 @@ struct ImportView: View {
     
     // MARK: - Import Helper
     
+    @MainActor
     private func importRecipes(from url: URL) {
         guard url.startAccessingSecurityScopedResource() else {
             toastMessage = "Cannot access file."
@@ -223,16 +242,17 @@ struct ImportView: View {
         defer { url.stopAccessingSecurityScopedResource() }
         
         do {
-            let data = try Data(contentsOf: url)
-            let fileExtension = url.pathExtension
-            let count = try ExportImportService.importRecipes(from: data, fileExtension: fileExtension, into: modelContext)
-            
-            if !ProStatus.canSaveMore(currentCount: recipes.count + count) {
+            let currentCount = (try? modelContext.fetch(FetchDescriptor<Recipe>()))?.count ?? 0
+            if !ProStatus.isPro && currentCount >= 25 {
                 toastMessage = "Free limit reached! Upgrade to import more."
                 showToast = true
                 return
             }
-            
+
+            let data = try Data(contentsOf: url)
+            let fileExtension = url.pathExtension
+            let count = try ExportImportService.importRecipes(from: data, fileExtension: fileExtension, into: modelContext)
+
             toastMessage = "Imported \(count) recipe\(count == 1 ? "" : "s")!"
             showToast = true
             HapticManager.success()

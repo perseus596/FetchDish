@@ -9,6 +9,8 @@
 		<string>group.com.paczka.fetchdish.app</string>
 		<string>group.com.fetchdish.app</string>
 	</array>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 	<key>com.apple.security.network.client</key>
 	<true/>
 </dict>

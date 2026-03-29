@@ -32,16 +32,15 @@ struct RecipeDetailView: View {
     @State private var introUserProceeded = false
     @State private var showProUpgradeForEdit = false
     @State private var showProUpgradeForMyRecipe = false
+    @State private var ingredientsExpanded: Bool = true
     #if os(macOS)
     @State private var showConverter = false
     #endif
 
     // MARK: - Flame animation state
-    @State private var flameColorIndex: Int = 0
+    @State private var flameColor: Color = Color.orange
     @State private var flameTimer: Timer? = nil
     @State private var showSafetyAlert: Bool = false
-
-    private let flameColors: [Color] = [.red, .yellow, .blue]
 
     // MARK: - Auto-scroll state
     @State private var autoScrollPlaying = false
@@ -87,12 +86,11 @@ struct RecipeDetailView: View {
             VStack(spacing: 2) {
                 Image(systemName: cookMode ? "flame.fill" : "flame")
                     .font(.system(size: 22))
-                    .foregroundStyle(cookMode ? flameColors[flameColorIndex] : .primary)
-                    .animation(.easeInOut(duration: 0.6), value: flameColorIndex)
+                    .foregroundStyle(cookMode ? flameColor : .primary)
                 Text(cookMode ? "Cooking" : "Cook")
                     .font(.system(size: 11))
             }
-            .foregroundStyle(cookMode ? flameColors[flameColorIndex] : .primary)
+            .foregroundStyle(cookMode ? flameColor : .primary)
         }
         .popover(isPresented: $showCookModeTip, arrowEdge: .top) {
             Text("**Cook Mode** — keeps your screen on and enlarges text while you cook")
@@ -695,18 +693,23 @@ struct RecipeDetailView: View {
     // MARK: - Flame animation helpers
 
     private func startFlameTimer() {
-        stopFlameTimer()
-        let timer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { _ in
-            flameColorIndex = (flameColorIndex + 1) % 3
+        flameTimer?.invalidate()
+        flameTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+            // 60% chance deep orange, 40% chance bright amber — random flicker
+            let useDeep = Double.random(in: 0...1) > 0.4
+            withAnimation(.easeInOut(duration: 0.12)) {
+                flameColor = useDeep
+                    ? Color(red: 1.0, green: 0.45, blue: 0.0)
+                    : Color(red: 1.0, green: 0.75, blue: 0.1)
+            }
         }
-        RunLoop.main.add(timer, forMode: .common)
-        flameTimer = timer
+        RunLoop.main.add(flameTimer!, forMode: .common)
     }
 
     private func stopFlameTimer() {
         flameTimer?.invalidate()
         flameTimer = nil
-        flameColorIndex = 0
+        flameColor = Color.orange  // reset to neutral
     }
 
     // MARK: - Subviews
@@ -829,11 +832,33 @@ struct RecipeDetailView: View {
         let allChecked = recipe.ingredients.allSatisfy { $0.isChecked }
 
         return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Ingredients")
-                    .font(cookMode ? .system(size: 18 * cookModeFontSize, weight: .bold) : .appHeadline)
-                Spacer()
-                if !cookMode {
+            if cookMode {
+                // Collapsible header in cook mode
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        ingredientsExpanded.toggle()
+                    }
+                    HapticManager.light()
+                } label: {
+                    HStack {
+                        Text("Ingredients")
+                            .font(.system(size: 18 * cookModeFontSize, weight: .bold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14 * cookModeFontSize, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(ingredientsExpanded ? 90 : 0))
+                            .animation(.easeInOut(duration: 0.25), value: ingredientsExpanded)
+                    }
+                    .padding(.horizontal)
+                }
+                .buttonStyle(.plain)
+            } else {
+                HStack {
+                    Text("Ingredients")
+                        .font(.appHeadline)
+                    Spacer()
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             let newValue = !allChecked
@@ -849,9 +874,10 @@ struct RecipeDetailView: View {
                             .foregroundStyle(Color("AccentGreen"))
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
 
+            if !cookMode || ingredientsExpanded {
             ForEach(recipe.ingredients.sorted(by: { $0.sortOrder < $1.sortOrder })) { ingredient in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -877,6 +903,7 @@ struct RecipeDetailView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
             }
+            } // end if !cookMode || ingredientsExpanded
 
             // Add checked ingredients to shopping list
             if !checkedIngredients.isEmpty && !cookMode && !showGoToShoppingList {

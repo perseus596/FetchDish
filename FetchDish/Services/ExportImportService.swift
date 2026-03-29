@@ -68,10 +68,11 @@ enum ExportImportService {
                 isFavorite: export.isFavorite
             )
             
+            recipe.dietaryTags = export.dietaryTags
             context.insert(recipe)
             importedCount += 1
         }
-        
+
         try context.save()
         return importedCount
     }
@@ -284,6 +285,9 @@ enum ExportImportService {
         
         // Extract text based on file type
         switch fileExtension.lowercased() {
+        case "json":
+            return try importRecipesFromJSON(from: data, into: context)
+
         case "txt":
             text = String(data: data, encoding: .utf8)
             
@@ -650,7 +654,8 @@ struct RecipeExport: Codable {
     let dateAdded: Date
     let dateModified: Date
     let isFavorite: Bool
-    
+    var dietaryTags: [String] = []
+
     init(from recipe: Recipe) {
         self.title = recipe.title
         self.description = recipe.descriptionText
@@ -675,6 +680,7 @@ struct RecipeExport: Codable {
         self.dateAdded = recipe.dateAdded
         self.dateModified = recipe.dateModified
         self.isFavorite = recipe.isFavorite
+        self.dietaryTags = recipe.dietaryTags
     }
 }
 

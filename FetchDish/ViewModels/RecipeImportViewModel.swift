@@ -9,6 +9,7 @@ final class RecipeImportViewModel {
     var isLoading: Bool = false
     var loadingMessage: String = ""
     var errorMessage: String?
+    var showPinterestTip: Bool = false
     var parsedRecipe: RecipeParser.ParsedRecipe?
     var showPreview: Bool = false
 
@@ -26,6 +27,13 @@ final class RecipeImportViewModel {
         "Almost there...",
     ]
 
+    // MARK: - Pinterest Helpers
+
+    private func isPinterestURL(_ url: URL) -> Bool {
+        let host = url.host?.lowercased() ?? ""
+        return host.contains("pinterest.") || host == "pin.it"
+    }
+
     // MARK: - Import
 
     @MainActor
@@ -42,18 +50,27 @@ final class RecipeImportViewModel {
             finalUrl = "https://\(url)"
         }
 
-        guard URL(string: finalUrl) != nil else {
+        guard let parsedURL = URL(string: finalUrl) else {
             errorMessage = "That doesn't look like a valid URL. Check it and try again."
             return
         }
 
         isLoading = true
         errorMessage = nil
+        showPinterestTip = false
         parsedRecipe = nil
         startLoadingMessages()
 
+        // Pinterest URLs can't be imported — bot detection and login walls block access
+        if isPinterestURL(parsedURL) {
+            stopLoadingMessages()
+            isLoading = false
+            showPinterestTip = true
+            return
+        }
+
         do {
-            let recipe = try await parser.fetchAndParse(url: finalUrl)
+            let recipe = try await parser.fetchAndParse(url: parsedURL.absoluteString)
             parsedRecipe = recipe
             showPreview = true
         } catch {
@@ -137,6 +154,7 @@ final class RecipeImportViewModel {
         urlText = ""
         isLoading = false
         errorMessage = nil
+        showPinterestTip = false
         parsedRecipe = nil
         showPreview = false
         stopLoadingMessages()
