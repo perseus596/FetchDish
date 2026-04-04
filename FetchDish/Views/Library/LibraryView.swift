@@ -109,6 +109,9 @@ struct LibraryView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search recipes or ingredients")
+        #if os(macOS)
+        .overlay(deleteConfirmOverlay)
+        #else
         .confirmationDialog(
             "Delete \(recipeToDelete?.title ?? "this recipe")?",
             isPresented: $showDeleteConfirm,
@@ -123,6 +126,7 @@ struct LibraryView: View {
                 }
             }
         }
+        #endif
     }
 
     // MARK: - Toolbar Menu
@@ -290,4 +294,62 @@ struct LibraryView: View {
         }
         .tint(Color("AccentGreen"))
     }
+
+    // MARK: - Delete Confirmation Overlay (macOS: supports Return key)
+    #if os(macOS)
+    private var deleteConfirmOverlay: some View {
+        ZStack {
+            if showDeleteConfirm {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showDeleteConfirm = false
+                        recipeToDelete = nil
+                    }
+
+                VStack(spacing: 20) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "trash.circle.fill")
+                            .font(.system(size: 36))
+                            .foregroundStyle(.red)
+                        Text("Delete Recipe?")
+                            .font(.headline)
+                        Text(recipeToDelete?.title ?? "")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    HStack(spacing: 12) {
+                        Button("Cancel") {
+                            showDeleteConfirm = false
+                            recipeToDelete = nil
+                        }
+                        .keyboardShortcut(.cancelAction)
+                        .buttonStyle(.bordered)
+
+                        Button("Delete") {
+                            if let recipe = recipeToDelete {
+                                withAnimation {
+                                    modelContext.delete(recipe)
+                                    try? modelContext.save()
+                                }
+                            }
+                            showDeleteConfirm = false
+                            recipeToDelete = nil
+                        }
+                        .keyboardShortcut(.defaultAction)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                    }
+                }
+                .padding(28)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.3), radius: 20, y: 8)
+                .frame(maxWidth: 320)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showDeleteConfirm)
+    }
+    #endif
 }

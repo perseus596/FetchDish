@@ -676,10 +676,9 @@ enum ExportImportService {
                                 "servings per container", "Daily Value"]
 
         // Lines to skip entirely (boilerplate)
-        let boilerplateMarkers = ["This material was funded", "USDA", "Oregon State",
-                                   "Table of Contents", "Freezing Tips", "Cooking Tools",
-                                   "Storing Fresh", "Keep It Safe", "Kitchen Measuring",
-                                   "foodhero.org", "www.", "©", "SNAP"]
+        let boilerplateMarkers = ["This material was funded", "Table of Contents", "Freezing Tips",
+                                   "Cooking Tools", "Storing Fresh", "Keep It Safe", "Kitchen Measuring",
+                                   "SNAP-Ed", "foodhero.org"]
 
         func isNutritionPage(_ text: String) -> Bool {
             let lines = text.components(separatedBy: .newlines).prefix(3).map { $0.trimmingCharacters(in: .whitespaces) }
@@ -690,12 +689,84 @@ enum ExportImportService {
             boilerplateMarkers.contains { text.contains($0) }
         }
 
+        /// Removes nutrition label blocks from a page's text, keeping only recipe content.
+        func stripNutritionBlocks(_ text: String) -> String {
+            let lines = text.components(separatedBy: .newlines)
+            var result: [String] = []
+            var inNutritionBlock = false
+            var nutritionLineCount = 0
+
+            let nutritionKeywords = [
+                "% daily value", "total fat", "saturated fat", "trans fat",
+                "cholesterol", "sodium", "total carbohydrate", "dietary fiber",
+                "total sugars", "added sugars", "vitamin d", "vitamin a", "vitamin c",
+                "calcium", "iron", "potassium", "serving size", "servings per container",
+                "amount per serving", "daily value", "nutrition facts",
+                "calories from fat", "monounsaturated", "polyunsaturated"
+            ]
+
+            func isNutritionLine(_ line: String) -> Bool {
+                let lower = line.lowercased().trimmingCharacters(in: .whitespaces)
+                // Pure number or percentage lines
+                if lower.isEmpty { return false }
+                // Lines that are just "Calories" alone or "Calories X"
+                if lower.hasPrefix("calories") && lower.count < 20 { return true }
+                // Lines matching nutrition keywords
+                if nutritionKeywords.contains(where: { lower.contains($0) }) { return true }
+                // Lines that look like "Xg X%" or "Xmg X%" patterns (nutrient amounts)
+                let pattern = #"^\d+(\.\d+)?\s*(g|mg|mcg|kcal|%|IU)"#
+                if lower.range(of: pattern, options: .regularExpression) != nil { return true }
+                // Lines like "X% X%" or containing just percentages
+                if lower.range(of: #"^\d+%"#, options: .regularExpression) != nil { return true }
+                // "servings per container" style
+                if lower.contains("per container") || lower.contains("per serving") { return true }
+                // Lines like "8 servings per container Serving size"
+                if lower.range(of: #"^\d+\s+servings"#, options: .regularExpression) != nil { return true }
+                return false
+            }
+
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if isNutritionLine(trimmed) {
+                    inNutritionBlock = true
+                    nutritionLineCount += 1
+                    continue
+                }
+                // If we were in a nutrition block and see "Ingredients" or recipe keywords, stop skipping
+                let upper = trimmed.uppercased()
+                if inNutritionBlock {
+                    // End nutrition block when we hit recipe content
+                    if upper == "INGREDIENTS" || upper == "DIRECTIONS" || upper == "INSTRUCTIONS" {
+                        inNutritionBlock = false
+                        nutritionLineCount = 0
+                        result.append(trimmed)
+                        continue
+                    }
+                    // Non-nutrition line after a small block — might be a title or transition
+                    if nutritionLineCount < 3 {
+                        inNutritionBlock = false
+                        nutritionLineCount = 0
+                        result.append(trimmed)
+                    }
+                    // Otherwise keep skipping (still in long nutrition block)
+                    continue
+                }
+                result.append(trimmed)
+            }
+            return result.joined(separator: "\n")
+        }
+
         // Flatten all pages into lines, skipping nutrition/boilerplate pages
         var allLines: [String] = []
         for page in pages {
-            if isNutritionPage(page) || isBoilerplatePage(page) { continue }
-            let pageLines = page.components(separatedBy: .newlines)
+            if isBoilerplatePage(page) { continue }
+            // If nutrition page but has recipe content, strip the nutrition block and keep recipe
+            let cleaned = stripNutritionBlocks(page)
+            let pageLines = cleaned.components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespaces) }
+            // Only skip if after stripping there's no recipe content left
+            let hasRecipeContent = pageLines.contains { $0.uppercased() == "INGREDIENTS" || $0.uppercased() == "DIRECTIONS" || $0.uppercased() == "INSTRUCTIONS" }
+            if isNutritionPage(page) && !hasRecipeContent { continue }
             allLines.append(contentsOf: pageLines)
             allLines.append("") // page break marker
         }
@@ -703,6 +774,7 @@ enum ExportImportService {
         // Split into recipe blocks: each block starts just before an "Ingredients" line
         var chunks: [[String]] = []
         var currentBlock: [String] = []
+        var lastPotentialTitle: String? = nil
 
         for line in allLines {
             let upper = line.uppercased()
@@ -726,11 +798,12 @@ enum ExportImportService {
                         !$0.hasPrefix("•") &&
                         !($0.first?.isNumber ?? false)
                     }
-                    let title = titleCandidates.last
+                    let title = titleCandidates.last ?? lastPotentialTitle
                     currentBlock = []
                     if let t = title {
                         currentBlock.append("TITLE: \(t)")
                     }
+                    lastPotentialTitle = nil
                 } else if !currentBlock.isEmpty {
                     // currentBlock has lines but no Ingredients yet — look for title among them
                     let lookback = min(5, currentBlock.count)
@@ -746,14 +819,31 @@ enum ExportImportService {
                         !$0.hasPrefix("•") &&
                         !($0.first?.isNumber ?? false)
                     }
-                    let title = titleCandidates.last
+                    let title = titleCandidates.last ?? lastPotentialTitle
                     currentBlock = []
                     if let t = title {
                         currentBlock.append("TITLE: \(t)")
                     }
+                    lastPotentialTitle = nil
                 }
                 currentBlock.append(line)
             } else {
+                // Track potential recipe titles (proper-cased lines that look like recipe names)
+                let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+                if !trimmedLine.isEmpty &&
+                   trimmedLine.count > 4 &&
+                   !trimmedLine.hasPrefix("•") &&
+                   !trimmedLine.hasPrefix("-") &&
+                   !(trimmedLine.first?.isNumber ?? false) &&
+                   !trimmedLine.uppercased().hasPrefix("PREP") &&
+                   !trimmedLine.uppercased().hasPrefix("MAKES") &&
+                   !trimmedLine.uppercased().hasPrefix("COOK") &&
+                   !trimmedLine.uppercased().hasPrefix("DIRECTIONS") &&
+                   !trimmedLine.uppercased().hasPrefix("INSTRUCTIONS") &&
+                   !trimmedLine.lowercased().contains("serving") &&
+                   trimmedLine.first?.isUppercase == true {
+                    lastPotentialTitle = trimmedLine
+                }
                 currentBlock.append(line)
             }
         }

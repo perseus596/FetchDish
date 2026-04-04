@@ -108,7 +108,7 @@ struct MacRootView: View {
 
     var body: some View {
         NavigationSplitView {
-            MacSidebarView(selected: $selectedDestination)
+            MacSidebarView(selected: $selectedDestination, navigationPath: $navigationPath)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
         } detail: {
             NavigationStack(path: $navigationPath) {
@@ -145,6 +145,7 @@ struct MacRootView: View {
 
 struct MacSidebarView: View {
     @Binding var selected: AppDestination?
+    @Binding var navigationPath: NavigationPath
     @AppStorage("appearance") private var appearance: String = "system"
     @Query private var recipes: [Recipe]
 
@@ -218,7 +219,13 @@ struct MacSidebarView: View {
     private func sidebarButton(_ title: String, subtitle: String? = nil,
                                 icon: String, dest: AppDestination) -> some View {
         let isSelected = selected == dest
-        Button { selected = dest } label: {
+        Button {
+            if selected == dest {
+                navigationPath = NavigationPath()
+            } else {
+                selected = dest
+            }
+        } label: {
             HStack(spacing: 10) {
                 Image(systemName: icon).font(.body).frame(width: 22)
                 VStack(alignment: .leading, spacing: 1) {

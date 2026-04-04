@@ -34,10 +34,10 @@ struct ShelfRowView: View {
     @ViewBuilder
     private func recipeCard(_ recipe: Recipe) -> some View {
         if isEditing {
-            // Edit mode: show card with delete button
-            ZStack(alignment: .topLeading) {
+            ZStack(alignment: .topTrailing) {
                 RecipeCardView(recipe: recipe)
-                
+                    .allowsHitTesting(false)
+
                 Button {
                     onDelete(recipe)
                 } label: {
@@ -46,8 +46,10 @@ struct ShelfRowView: View {
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(.white, .red)
                         .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                        .padding(6)
                 }
-                .offset(x: -6, y: -6)
+                .buttonStyle(.plain)
+                .offset(x: 0, y: -6)
             }
         } else {
             // Normal mode: tappable card for navigation
