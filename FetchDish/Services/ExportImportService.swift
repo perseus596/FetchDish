@@ -308,17 +308,60 @@ enum ExportImportService {
             #endif
             
         case "pdf":
-            // Extract text from PDF
             #if canImport(PDFKit)
             if let pdfDocument = PDFDocument(data: data) {
-                var pdfText = ""
+                // Check if this is a multi-recipe PDF by counting Ingredients/Directions pairs
+                var pages: [String] = []
                 for pageIndex in 0..<pdfDocument.pageCount {
                     if let page = pdfDocument.page(at: pageIndex),
                        let pageContent = page.string {
-                        pdfText += pageContent + "\n"
+                        pages.append(pageContent)
                     }
                 }
-                text = pdfText
+                let fullText = pages.joined(separator: "\n")
+                // Count how many "Ingredients" + "Directions" pairs exist
+                let lowerText = fullText.lowercased()
+                let ingredientCount = lowerText.components(separatedBy: "\ningredients").count - 1
+                    + (lowerText.hasPrefix("ingredients") ? 1 : 0)
+                if ingredientCount > 1 {
+                    // Multi-recipe PDF — use smart splitter
+                    let extracted = extractMultipleRecipesFromPDFPages(pages)
+                    let recipes = try parseRecipesFromText(extracted)
+                    var importedCount = 0
+                    for parsedRecipe in recipes {
+                        let recipe = Recipe(
+                            title: parsedRecipe.title,
+                            descriptionText: parsedRecipe.description,
+                            sourceUrl: parsedRecipe.sourceUrl,
+                            prepTime: parsedRecipe.prepTime,
+                            cookTime: parsedRecipe.cookTime,
+                            totalTime: parsedRecipe.totalTime,
+                            servings: parsedRecipe.servings,
+                            ingredients: parsedRecipe.ingredients.enumerated().map { index, text in
+                                let parsed = IngredientParser.parse(text)
+                                return RecipeIngredient(
+                                    original: text, amount: parsed.amount,
+                                    unit: parsed.unit, name: parsed.name, sortOrder: index
+                                )
+                            },
+                            instructions: parsedRecipe.instructions.enumerated().map { index, text in
+                                RecipeInstruction(stepNumber: index + 1, text: text)
+                            },
+                            notes: parsedRecipe.notes,
+                            tags: parsedRecipe.tags,
+                            calories: parsedRecipe.nutrition["Calories"],
+                            fat: parsedRecipe.nutrition["Fat"],
+                            carbs: parsedRecipe.nutrition["Carbs"],
+                            protein: parsedRecipe.nutrition["Protein"]
+                        )
+                        context.insert(recipe)
+                        importedCount += 1
+                    }
+                    try context.save()
+                    return importedCount
+                } else {
+                    text = fullText
+                }
             }
             #else
             throw ImportError.unsupportedFormat
@@ -488,11 +531,11 @@ enum ExportImportService {
                 currentSection = "ingredients"
                 i += 1
                 continue
-            } else if upperLine == "INSTRUCTIONS" {
+            } else if upperLine == "INSTRUCTIONS" || upperLine == "DIRECTIONS" || upperLine == "STEPS" || upperLine == "METHOD" {
                 currentSection = "instructions"
                 i += 1
                 continue
-            } else if upperLine == "NOTES" {
+            } else if upperLine == "NOTES" || upperLine == "NOTE" || upperLine == "TIPS" || upperLine == "VARIATIONS" {
                 currentSection = "notes"
                 i += 1
                 continue
@@ -543,10 +586,17 @@ enum ExportImportService {
                     }
                     
                 case "instructions":
-                    let cleaned = line.replacingOccurrences(of: "^\\d+\\.\\s*", with: "", options: .regularExpression)
+                    let cleaned = line.replacingOccurrences(of: "^\\d+[.)\\s]\\s*", with: "", options: .regularExpression)
                         .trimmingCharacters(in: .whitespaces)
                     if !cleaned.isEmpty {
-                        instructions.append(cleaned)
+                        // Check if this line starts a new numbered step
+                        let startsNewStep = line.range(of: "^\\d+[.)\\s]", options: .regularExpression) != nil
+                        if startsNewStep || instructions.isEmpty {
+                            instructions.append(cleaned)
+                        } else {
+                            // Continuation line — join to previous instruction
+                            instructions[instructions.count - 1] += " " + cleaned
+                        }
                     }
                     
                 case "notes":
@@ -612,6 +662,124 @@ enum ExportImportService {
         #else
         return NSFont.systemFont(ofSize: size)
         #endif
+    }
+
+    /// Splits a multi-recipe PDF (pages array) into FetchDish-separator-delimited text
+    /// by detecting Ingredients/Directions blocks as recipe boundaries.
+    private static func extractMultipleRecipesFromPDFPages(_ pages: [String]) -> String {
+        let separator = "═══════════════════════════════════════════"
+
+        // Lines that indicate a nutrition facts page — skip these
+        let nutritionMarkers = ["% Daily Value", "Saturated Fat", "Trans Fat",
+                                "Cholesterol", "Dietary Fiber", "Total Sugars",
+                                "Vitamin D", "Nutrition Facts", "Serving size",
+                                "servings per container", "Daily Value"]
+
+        // Lines to skip entirely (boilerplate)
+        let boilerplateMarkers = ["This material was funded", "USDA", "Oregon State",
+                                   "Table of Contents", "Freezing Tips", "Cooking Tools",
+                                   "Storing Fresh", "Keep It Safe", "Kitchen Measuring",
+                                   "foodhero.org", "www.", "©", "SNAP"]
+
+        func isNutritionPage(_ text: String) -> Bool {
+            let lines = text.components(separatedBy: .newlines).prefix(3).map { $0.trimmingCharacters(in: .whitespaces) }
+            return lines.first == "Calories" && lines.contains(where: { $0.lowercased().contains("serving size") || $0.lowercased().contains("servings per") })
+        }
+
+        func isBoilerplatePage(_ text: String) -> Bool {
+            boilerplateMarkers.contains { text.contains($0) }
+        }
+
+        // Flatten all pages into lines, skipping nutrition/boilerplate pages
+        var allLines: [String] = []
+        for page in pages {
+            if isNutritionPage(page) || isBoilerplatePage(page) { continue }
+            let pageLines = page.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            allLines.append(contentsOf: pageLines)
+            allLines.append("") // page break marker
+        }
+
+        // Split into recipe blocks: each block starts just before an "Ingredients" line
+        var chunks: [[String]] = []
+        var currentBlock: [String] = []
+
+        for line in allLines {
+            let upper = line.uppercased()
+            if upper == "INGREDIENTS" {
+                // Check if currentBlock already has its own Ingredients header
+                let hasIngredients = currentBlock.contains { $0.uppercased() == "INGREDIENTS" }
+                if hasIngredients {
+                    // Save the current block as a complete recipe
+                    chunks.append(currentBlock)
+                    // Look back up to 5 lines for the title of the new recipe
+                    let lookback = min(5, currentBlock.count)
+                    let titleCandidates = currentBlock.suffix(lookback).filter {
+                        $0.count > 3 &&
+                        !$0.isEmpty &&
+                        !$0.uppercased().hasPrefix("DIRECTIONS") &&
+                        !$0.uppercased().hasPrefix("INSTRUCTIONS") &&
+                        !$0.hasPrefix("Prep") &&
+                        !$0.hasPrefix("Makes") &&
+                        !$0.hasPrefix("Serves") &&
+                        !$0.contains("Food Hero") &&
+                        !$0.hasPrefix("•") &&
+                        !($0.first?.isNumber ?? false)
+                    }
+                    let title = titleCandidates.last
+                    currentBlock = []
+                    if let t = title {
+                        currentBlock.append("TITLE: \(t)")
+                    }
+                } else if !currentBlock.isEmpty {
+                    // currentBlock has lines but no Ingredients yet — look for title among them
+                    let lookback = min(5, currentBlock.count)
+                    let titleCandidates = currentBlock.suffix(lookback).filter {
+                        $0.count > 3 &&
+                        !$0.isEmpty &&
+                        !$0.uppercased().hasPrefix("DIRECTIONS") &&
+                        !$0.uppercased().hasPrefix("INSTRUCTIONS") &&
+                        !$0.hasPrefix("Prep") &&
+                        !$0.hasPrefix("Makes") &&
+                        !$0.hasPrefix("Serves") &&
+                        !$0.contains("Food Hero") &&
+                        !$0.hasPrefix("•") &&
+                        !($0.first?.isNumber ?? false)
+                    }
+                    let title = titleCandidates.last
+                    currentBlock = []
+                    if let t = title {
+                        currentBlock.append("TITLE: \(t)")
+                    }
+                }
+                currentBlock.append(line)
+            } else {
+                currentBlock.append(line)
+            }
+        }
+        if !currentBlock.isEmpty {
+            chunks.append(currentBlock)
+        }
+
+        // Convert chunks to separator-delimited text
+        // Format each chunk so parseRecipeSection can understand it
+        var result: [String] = []
+        for chunk in chunks {
+            let chunkText = chunk.joined(separator: "\n")
+
+            // Extract TITLE line if present
+            var chunkLines = chunkText.components(separatedBy: .newlines)
+            var title = "Untitled Recipe"
+            if let titleLine = chunkLines.first(where: { $0.hasPrefix("TITLE: ") }) {
+                title = titleLine.replacingOccurrences(of: "TITLE: ", with: "")
+                chunkLines = chunkLines.filter { !$0.hasPrefix("TITLE: ") }
+            }
+
+            let formattedChunk = "\(title)\n\n" + chunkLines.joined(separator: "\n")
+            result.append(formattedChunk)
+        }
+
+        return result.joined(separator: "\n\(separator)\n")
     }
 }
 

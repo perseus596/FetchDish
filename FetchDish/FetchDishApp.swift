@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct FetchDishApp: App {
     @AppStorage("appearance") private var appearance: String = "system"
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
     @State private var showSplash = true
 
     static func createContainer() -> ModelContainer {
@@ -47,13 +48,28 @@ struct FetchDishApp: App {
                         }
                     }
                 } else {
-                    #if os(macOS)
-                    MacRootView()
-                    #else
-                    MainMenuView()
-                    #endif
+                    ZStack {
+                        #if os(macOS)
+                        MacRootView()
+                        #else
+                        MainMenuView()
+                        #endif
+
+                        if !hasSeenOnboarding {
+                            OnboardingView {
+                                withAnimation(.easeInOut(duration: 0.6)) {
+                                    hasSeenOnboarding = true
+                                }
+                            }
+                            .transition(.opacity)
+                            .zIndex(1)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.6), value: hasSeenOnboarding)
                 }
             }
+            // DEV MODE: always show onboarding — remove before App Store submission
+            .onAppear { hasSeenOnboarding = false }
             .preferredColorScheme(colorScheme)
         }
         .modelContainer(sharedModelContainer)
@@ -235,4 +251,3 @@ struct MacSidebarView: View {
     }
 }
 #endif
-

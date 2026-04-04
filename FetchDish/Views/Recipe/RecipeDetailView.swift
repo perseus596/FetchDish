@@ -4,6 +4,47 @@ import SwiftData
 import AppKit
 #endif
 
+@Observable
+final class CookScrollState {
+    var scrollOffset: CGFloat = 0
+    var contentHeight: CGFloat = 0
+    var viewportHeight: CGFloat = 0
+    var dragStartOffset: CGFloat = 0
+    var autoScrollPlaying: Bool = false
+    var autoScrollSpeed: Int = 2
+    private var autoScrollTimer: Timer?
+
+    private static let speedPoints: [CGFloat] = [0.5, 1.0, 1.8, 2.8, 4.0]
+
+    func startAutoScroll() {
+        stopAutoScroll()
+        let safeIndex = max(0, min(autoScrollSpeed, Self.speedPoints.count - 1))
+        let points = Self.speedPoints[safeIndex]
+        let interval: TimeInterval = 1.0 / 60.0
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            let maxOffset = max(0, self.contentHeight - self.viewportHeight)
+            guard maxOffset > 0 else { return }
+            var next = self.scrollOffset + points
+            if next >= maxOffset { next = 0 }
+            self.scrollOffset = next
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        autoScrollTimer = timer
+    }
+
+    func stopAutoScroll() {
+        autoScrollTimer?.invalidate()
+        autoScrollTimer = nil
+    }
+
+    func reset() {
+        scrollOffset = 0
+        autoScrollPlaying = false
+        stopAutoScroll()
+    }
+}
+
 struct RecipeDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -37,24 +78,11 @@ struct RecipeDetailView: View {
     @State private var showConverter = false
     #endif
 
-    // MARK: - Flame animation state
-    @State private var flameColor: Color = Color.orange
-    @State private var flameTimer: Timer? = nil
+    // MARK: - Safety alert state
     @State private var showSafetyAlert: Bool = false
 
     // MARK: - Auto-scroll state
-    @State private var autoScrollPlaying = false
-    @State private var autoScrollSpeed: Int = 2          // 0…4
-    @State private var autoScrollTimer: Timer? = nil
-    @State private var scrollOffset: CGFloat = 0
-    @State private var contentHeight: CGFloat = 0
-    @State private var viewportHeight: CGFloat = 0
-    // Tracks scrollOffset at the moment a manual drag gesture begins so we can
-    // compute the new offset from the gesture's cumulative translation correctly.
-    @State private var dragStartScrollOffset: CGFloat = 0
-
-    // Points-per-tick at a fixed 0.016 s interval (~60 fps)
-    private static let speedPoints: [CGFloat] = [0.5, 1.0, 1.8, 2.8, 4.0]
+    @State private var scrollState = CookScrollState()
     #if canImport(UIKit)
     @State private var decodedImage: UIImage?
     #else
@@ -71,26 +99,17 @@ struct RecipeDetailView: View {
                 #if canImport(UIKit)
                 UIApplication.shared.isIdleTimerDisabled = true
                 #endif
-                startFlameTimer()
             } else {
                 #if canImport(UIKit)
                 UIApplication.shared.isIdleTimerDisabled = false
                 #endif
                 activeStep = nil
                 timerManager.removeAll()
-                stopFlameTimer()
                 showSafetyAlert = true
             }
             HapticManager.medium()
         } label: {
-            VStack(spacing: 2) {
-                Image(systemName: cookMode ? "flame.fill" : "flame")
-                    .font(.system(size: 22))
-                    .foregroundStyle(cookMode ? flameColor : .primary)
-                Text(cookMode ? "Cooking" : "Cook")
-                    .font(.system(size: 11))
-            }
-            .foregroundStyle(cookMode ? flameColor : .primary)
+            FlameIcon(cookMode: cookMode)
         }
         .popover(isPresented: $showCookModeTip, arrowEdge: .top) {
             Text("**Cook Mode** — keeps your screen on and enlarges text while you cook")
@@ -419,15 +438,15 @@ struct RecipeDetailView: View {
                             GeometryReader { contentGeo in
                                 Color.clear
                                     .onAppear {
-                                        contentHeight = contentGeo.size.height
-                                        viewportHeight = viewportGeo.size.height
+                                        scrollState.contentHeight = contentGeo.size.height
+                                        scrollState.viewportHeight = viewportGeo.size.height
                                     }
                                     .onChange(of: contentGeo.size.height) { _, h in
-                                        contentHeight = h
+                                        scrollState.contentHeight = h
                                     }
                             }
                         )
-                        .offset(y: -scrollOffset)
+                        .offset(y: -scrollState.scrollOffset)
                         // Bug 1 fix: explicit width AND height so hit-testing covers the full
                         // viewport and inner Buttons receive taps correctly.
                         .frame(width: viewportGeo.size.width, height: viewportGeo.size.height, alignment: .top)
@@ -443,25 +462,25 @@ struct RecipeDetailView: View {
                                 .onChanged { value in
                                     // Capture baseline when translation is near zero (gesture start)
                                     if abs(value.translation.height) <= 12 && abs(value.translation.width) <= 12 {
-                                        dragStartScrollOffset = scrollOffset
+                                        scrollState.dragStartOffset = scrollState.scrollOffset
                                     }
-                                    let maxOffset = max(0, contentHeight - viewportHeight)
-                                    let next = (dragStartScrollOffset - value.translation.height)
+                                    let maxOffset = max(0, scrollState.contentHeight - scrollState.viewportHeight)
+                                    let next = (scrollState.dragStartOffset - value.translation.height)
                                         .clamped(to: 0...max(0, maxOffset))
-                                    scrollOffset = next
+                                    scrollState.scrollOffset = next
                                     // Do NOT pause auto-scroll — allow manual drag and auto-scroll simultaneously
                                 }
                         )
                         .onAppear {
-                            viewportHeight = viewportGeo.size.height
+                            scrollState.viewportHeight = viewportGeo.size.height
                         }
 
                     // Bug 3 fix: custom scroll indicator — a thin bar on the right edge that
                     // reflects the current scroll position within the content.
                     // The indicator is interactive: dragging it scrolls the content directly.
                     CookModeScrollIndicator(
-                        scrollOffset: $scrollOffset,
-                        contentHeight: contentHeight,
+                        scrollOffset: Binding(get: { scrollState.scrollOffset }, set: { scrollState.scrollOffset = $0 }),
+                        contentHeight: scrollState.contentHeight,
                         viewportHeight: viewportGeo.size.height
                     )
                 }
@@ -471,29 +490,18 @@ struct RecipeDetailView: View {
                     recipeBodyContent(recipe)
                 }
                 .onAppear {
-                    viewportHeight = viewportGeo.size.height
+                    scrollState.viewportHeight = viewportGeo.size.height
                 }
             }
         }
         .onChange(of: cookMode) { _, active in
-            scrollOffset = 0
-            if !active {
-                stopAutoScroll()
-                autoScrollPlaying = false
-            }
+            if !active { scrollState.reset() } else { scrollState.scrollOffset = 0 }
         }
-        .onChange(of: autoScrollPlaying) { _, playing in
-            if playing {
-                startAutoScroll()
-            } else {
-                stopAutoScroll()
-            }
+        .onChange(of: scrollState.autoScrollPlaying) { _, playing in
+            if playing { scrollState.startAutoScroll() } else { scrollState.stopAutoScroll() }
         }
-        .onChange(of: autoScrollSpeed) { _, _ in
-            if autoScrollPlaying {
-                stopAutoScroll()
-                startAutoScroll()
-            }
+        .onChange(of: scrollState.autoScrollSpeed) { _, _ in
+            if scrollState.autoScrollPlaying { scrollState.stopAutoScroll(); scrollState.startAutoScroll() }
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -501,17 +509,19 @@ struct RecipeDetailView: View {
         .toolbar {
             // CENTER: Cook button always; auto-scroll controls appear next to it when cook mode is active
             ToolbarItem(placement: .principal) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     cookModeButton
 
                     if cookMode {
+                        Divider().frame(height: 24).opacity(0.4)
+
                         // Play / Pause
                         Button {
-                            autoScrollPlaying.toggle()
+                            scrollState.autoScrollPlaying.toggle()
                         } label: {
-                            Image(systemName: autoScrollPlaying ? "pause.fill" : "play.fill")
+                            Image(systemName: scrollState.autoScrollPlaying ? "pause.fill" : "play.fill")
                                 .font(.system(size: 26, weight: .semibold))
-                                .foregroundStyle(autoScrollPlaying ? Color("Terracotta") : Color("AccentGreen"))
+                                .foregroundStyle(scrollState.autoScrollPlaying ? Color("Terracotta") : Color("AccentGreen"))
                         }
 
                         // Speed slider (tortoise → hare)
@@ -520,8 +530,8 @@ struct RecipeDetailView: View {
                                 .font(.system(size: 18))
                                 .foregroundStyle(.secondary)
                             Slider(value: Binding(
-                                get: { Double(autoScrollSpeed) },
-                                set: { autoScrollSpeed = Int($0.rounded()) }
+                                get: { Double(scrollState.autoScrollSpeed) },
+                                set: { scrollState.autoScrollSpeed = Int($0.rounded()) }
                             ), in: 0...4, step: 1)
                             .tint(Color("AccentGreen"))
                             .frame(minWidth: 200)
@@ -631,7 +641,7 @@ struct RecipeDetailView: View {
         }
         .animation(.easeInOut, value: showToast)
         .onDisappear {
-            stopAutoScroll()
+            scrollState.stopAutoScroll()
             #if canImport(UIKit)
             UIApplication.shared.isIdleTimerDisabled = false
             #endif
@@ -661,55 +671,6 @@ struct RecipeDetailView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Auto-scroll helpers
-
-    private func startAutoScroll() {
-        stopAutoScroll()
-        let safeIndex = max(0, min(autoScrollSpeed, Self.speedPoints.count - 1))
-        let points = Self.speedPoints[safeIndex]
-        let interval: TimeInterval = 1.0 / 60.0  // ~60 fps
-
-        let timer = Timer(timeInterval: interval, repeats: true) { _ in
-            let maxOffset = max(0, contentHeight - viewportHeight)
-            guard maxOffset > 0 else { return }
-            var next = scrollOffset + points
-            if next >= maxOffset {
-                // Loop back to top
-                next = 0
-            }
-            scrollOffset = next
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        autoScrollTimer = timer
-    }
-
-    private func stopAutoScroll() {
-        autoScrollTimer?.invalidate()
-        autoScrollTimer = nil
-    }
-
-    // MARK: - Flame animation helpers
-
-    private func startFlameTimer() {
-        flameTimer?.invalidate()
-        flameTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
-            // 60% chance deep orange, 40% chance bright amber — random flicker
-            let useDeep = Double.random(in: 0...1) > 0.4
-            withAnimation(.easeInOut(duration: 0.12)) {
-                flameColor = useDeep
-                    ? Color(red: 1.0, green: 0.45, blue: 0.0)
-                    : Color(red: 1.0, green: 0.75, blue: 0.1)
-            }
-        }
-        RunLoop.main.add(flameTimer!, forMode: .common)
-    }
-
-    private func stopFlameTimer() {
-        flameTimer?.invalidate()
-        flameTimer = nil
-        flameColor = Color.orange  // reset to neutral
     }
 
     // MARK: - Subviews
@@ -846,12 +807,13 @@ struct RecipeDetailView: View {
                             .foregroundStyle(.primary)
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14 * cookModeFontSize, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .rotationEffect(.degrees(ingredientsExpanded ? 90 : 0))
                             .animation(.easeInOut(duration: 0.25), value: ingredientsExpanded)
                     }
-                    .padding(.horizontal)
+                    .padding(.leading).padding(.trailing, 120)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             } else {
@@ -1046,6 +1008,7 @@ struct RecipeDetailView: View {
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
                             .opacity(instruction.isCompleted ? 0.5 : 1)
+                            .padding(.trailing, 120)
 
                         Spacer(minLength: 0)
                     }
@@ -2343,6 +2306,60 @@ struct EditRecipeSheet: View {
         .padding(.vertical, 16)
     }
     #endif
+}
+
+// MARK: - FlameIcon
+// Isolated subview so the flicker animation does not cause RecipeDetailView
+// to re-render on every timer tick, which was jittering the toolbar buttons.
+private struct FlameIcon: View {
+    let cookMode: Bool
+    @State private var flameColor: Color = .orange
+    @State private var flameTimer: Timer?
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Image(systemName: cookMode ? "flame.fill" : "flame")
+                .font(.system(size: 15, weight: .medium))
+            Text(cookMode ? "Cooking" : "Cook")
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.3)
+        }
+        .foregroundStyle(cookMode ? flameColor : .primary)
+        .frame(width: 72, height: 40)
+        .background(
+            Capsule()
+                .fill(cookMode ? Color.orange.opacity(0.2) : Color.clear)
+                .overlay(
+                    Capsule()
+                        .strokeBorder(cookMode ? Color.orange.opacity(0.4) : Color.clear, lineWidth: 1)
+                )
+        )
+        .clipShape(Capsule())
+        .onChange(of: cookMode) { _, active in
+            if active { startFlicker() } else { stopFlicker() }
+        }
+        .onAppear { if cookMode { startFlicker() } }
+        .onDisappear { stopFlicker() }
+    }
+
+    private func startFlicker() {
+        stopFlicker()
+        flameTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+            let useDeep = Double.random(in: 0...1) > 0.4
+            withAnimation(.easeInOut(duration: 0.12)) {
+                flameColor = useDeep
+                    ? Color(red: 1.0, green: 0.45, blue: 0.0)
+                    : Color(red: 1.0, green: 0.75, blue: 0.1)
+            }
+        }
+        RunLoop.main.add(flameTimer!, forMode: .common)
+    }
+
+    private func stopFlicker() {
+        flameTimer?.invalidate()
+        flameTimer = nil
+        flameColor = .orange
+    }
 }
 
 // Simple flow layout for tags

@@ -127,12 +127,12 @@ struct MetaBadge: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(Color("AccentGreen"))
+                .font(.system(size: 16))
+                .foregroundStyle(.primary)
             Text(value)
-                .font(.caption2.bold())
+                .font(.system(size: 16, weight: .bold))
             Text(label)
-                .font(.caption2)
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)

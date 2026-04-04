@@ -9,6 +9,8 @@ struct ProfileView: View {
     @Query(sort: \UserAllergen.name) private var allergens: [UserAllergen]
     @Query(sort: \UserDietaryPreference.name) private var dietaryPrefs: [UserDietaryPreference]
 
+    private let fetchDishURL = URL(string: "https://fetchdish.com")
+
     @AppStorage("appearance") private var appearance: String = "system"
     @AppStorage("cookModeFontSize") private var cookModeFontSize: Double = 1.4
     @AppStorage("appFontScale") private var appFontScale: Double = 1.0
@@ -24,6 +26,7 @@ struct ProfileView: View {
     @State private var exportFormat: ExportFormat = .txt
     @State private var newFavoriteIngredient = ""
     @State private var newCustomAllergen = ""
+    @State private var showOnboarding = false
 
     enum ExportFormat {
         case txt, rtf, pdf
@@ -428,12 +431,19 @@ struct ProfileView: View {
     private var aboutSection: some View {
         ProfileSection(title: "About") {
             VStack(spacing: 0) {
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text("1.0.0").foregroundStyle(.secondary)
+                Button {
+                    showOnboarding = true
+                } label: {
+                    HStack {
+                        Label("View App Tutorial", systemImage: "book.fill")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 10)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 10)
+                .buttonStyle(.plain)
 
                 Divider().padding(.leading, 16)
 
@@ -446,18 +456,42 @@ struct ProfileView: View {
 
                 Divider().padding(.leading, 16)
 
-                Link(destination: URL(string: "https://fetchdish.com")!) {
-                    HStack {
-                        Text("Website")
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                if let fetchDishURL {
+                    Link(destination: fetchDishURL) {
+                        HStack {
+                            Text("Website")
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 10)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    Divider().padding(.leading, 16)
                 }
+
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text("1.0.0").foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 10)
             }
         }
+        #if os(iOS)
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView {
+                showOnboarding = false
+            }
+        }
+        #else
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView {
+                showOnboarding = false
+            }
+            .frame(minWidth: 1000, minHeight: 750)
+        }
+        #endif
     }
 
     // MARK: - Seeding

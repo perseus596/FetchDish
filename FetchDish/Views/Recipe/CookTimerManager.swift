@@ -246,6 +246,45 @@ enum TimeExpressionParser {
     }
 }
 
+// MARK: - RepeatButton
+// Fires action immediately on press, then repeats while held.
+private struct RepeatButton<Label: View>: View {
+    let action: () -> Void
+    @ViewBuilder let label: () -> Label
+
+    @State private var holdTimer: Timer?
+    @State private var repeatTimer: Timer?
+    @State private var isPressed: Bool = false
+
+    var body: some View {
+        label()
+            .scaleEffect(isPressed ? 0.85 : 1.0)
+            .animation(.easeInOut(duration: 0.08), value: isPressed)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard !isPressed else { return }
+                        isPressed = true
+                        action()
+                        let h = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { _ in
+                            let r = Timer.scheduledTimer(withTimeInterval: 0.07, repeats: true) { _ in
+                                action()
+                            }
+                            RunLoop.main.add(r, forMode: .common)
+                            self.repeatTimer = r
+                        }
+                        RunLoop.main.add(h, forMode: .common)
+                        holdTimer = h
+                    }
+                    .onEnded { _ in
+                        isPressed = false
+                        holdTimer?.invalidate(); holdTimer = nil
+                        repeatTimer?.invalidate(); repeatTimer = nil
+                    }
+            )
+    }
+}
+
 // MARK: - Cook Mode Timer Sidebar
 // A vertical stack of draggable circular timer dials shown on the right side in cook mode.
 // Each dial represents a time expression found in the recipe instructions.
@@ -271,7 +310,7 @@ struct CookModeTimerSidebar: View {
     // Custom timer input
     @State private var showCustomTimerInput: Bool = false
     @State private var customHours: Int = 0
-    @State private var customMinutes: Int = 5
+    @State private var customMinutes: Int = 0
     @State private var customSeconds: Int = 0
 
     // MARK: - Design tokens
@@ -479,9 +518,9 @@ struct CookModeTimerSidebar: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Color(white: 0.5))
                                 Spacer()
-                                Button {
+                                RepeatButton(action: {
                                     if customHours > 0 { customHours -= 1 }
-                                } label: {
+                                }) {
                                     ZStack {
                                         Circle()
                                             .fill(Color(white: 0.25))
@@ -497,9 +536,9 @@ struct CookModeTimerSidebar: View {
                                     .foregroundStyle(.white)
                                     .frame(width: 36)
                                     .multilineTextAlignment(.center)
-                                Button {
+                                RepeatButton(action: {
                                     if customHours < 23 { customHours += 1 }
-                                } label: {
+                                }) {
                                     ZStack {
                                         Circle()
                                             .fill(Color(white: 0.25))
@@ -518,9 +557,9 @@ struct CookModeTimerSidebar: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Color(white: 0.5))
                                 Spacer()
-                                Button {
+                                RepeatButton(action: {
                                     if customMinutes > 0 { customMinutes -= 1 }
-                                } label: {
+                                }) {
                                     ZStack {
                                         Circle()
                                             .fill(Color(white: 0.25))
@@ -536,9 +575,9 @@ struct CookModeTimerSidebar: View {
                                     .foregroundStyle(.white)
                                     .frame(width: 36)
                                     .multilineTextAlignment(.center)
-                                Button {
+                                RepeatButton(action: {
                                     if customMinutes < 59 { customMinutes += 1 }
-                                } label: {
+                                }) {
                                     ZStack {
                                         Circle()
                                             .fill(Color(white: 0.25))
@@ -557,9 +596,9 @@ struct CookModeTimerSidebar: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Color(white: 0.5))
                                 Spacer()
-                                Button {
+                                RepeatButton(action: {
                                     if customSeconds > 0 { customSeconds -= 1 }
-                                } label: {
+                                }) {
                                     ZStack {
                                         Circle()
                                             .fill(Color(white: 0.25))
@@ -575,9 +614,9 @@ struct CookModeTimerSidebar: View {
                                     .foregroundStyle(.white)
                                     .frame(width: 36)
                                     .multilineTextAlignment(.center)
-                                Button {
+                                RepeatButton(action: {
                                     if customSeconds < 59 { customSeconds += 1 }
-                                } label: {
+                                }) {
                                     ZStack {
                                         Circle()
                                             .fill(Color(white: 0.25))
@@ -609,7 +648,7 @@ struct CookModeTimerSidebar: View {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     showCustomTimerInput = false
                                     customHours = 0
-                                    customMinutes = 5
+                                    customMinutes = 0
                                     customSeconds = 0
                                 }
                             } label: {
@@ -642,16 +681,43 @@ struct CookModeTimerSidebar: View {
     @ViewBuilder
     private func pillView(pill: Binding<TimerPill>) -> some View {
         let p = pill.wrappedValue
-        Button {
-            handlePillTap(pill: pill)
-        } label: {
-            dialLabel(for: p)
+        ZStack(alignment: .topTrailing) {
+            Button {
+                handlePillTap(pill: pill)
+            } label: {
+                dialLabel(for: p)
+            }
+            .buttonStyle(.plain)
+            .frame(width: dialSize, height: dialSize)
+            .shadow(color: pillShadow, radius: 8, x: 0, y: 4)
+            .scaleEffect(p.isUrgent ? pulseScale : 1.0)
+            .animation(.easeInOut(duration: 0.3), value: p.isRunning)
+
+            // X button — only shown when done
+            if case .done = p.state {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        pills.removeAll { $0.id == p.id }
+                    }
+                    HapticManager.light()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color(white: 0.15))
+                            .frame(width: 20, height: 20)
+                        Circle()
+                            .strokeBorder(Color(white: 0.45), lineWidth: 1)
+                            .frame(width: 20, height: 20)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .buttonStyle(.plain)
+                .offset(x: 4, y: -4)
+                .transition(.scale.combined(with: .opacity))
+            }
         }
-        .buttonStyle(.plain)
-        .frame(width: dialSize, height: dialSize)
-        .shadow(color: pillShadow, radius: 8, x: 0, y: 4)
-        .scaleEffect(p.isUrgent ? pulseScale : 1.0)
-        .animation(.easeInOut(duration: 0.3), value: p.isRunning)
     }
 
     @ViewBuilder
@@ -841,9 +907,10 @@ struct CookModeTimerSidebar: View {
                         startBlinkSequence(for: pillID)
                         // Auto-reset to idle after 12 seconds so user can restart if needed
                         DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
-                            if case .done = self.pills[index].state {
+                            guard let i = self.pills.firstIndex(where: { $0.id == pillID }) else { return }
+                            if case .done = self.pills[i].state {
                                 self.blinkingPills.remove(pillID)
-                                withAnimation { self.pills[index].state = .idle }
+                                withAnimation { self.pills[i].state = .idle }
                             }
                         }
                     }
