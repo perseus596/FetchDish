@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 #if canImport(AppKit)
 import AppKit
 #endif
@@ -204,6 +205,7 @@ struct RecipeDetailView: View {
                                         recipe.cookTime = updatedDraft.cookTime.isEmpty ? recipe.cookTime : updatedDraft.cookTime
                                         recipe.totalTime = updatedDraft.totalTime.isEmpty ? recipe.totalTime : updatedDraft.totalTime
                                         recipe.notes = updatedDraft.notes
+                                        recipe.imageData = updatedDraft.imageData
                                         // Sync ingredients
                                         let existing = recipe.ingredients
                                         for ing in existing { modelContext.delete(ing) }
@@ -300,7 +302,7 @@ struct RecipeDetailView: View {
                                                 title: draft.title,
                                                 descriptionText: recipe.descriptionText,
                                                 sourceUrl: recipe.sourceUrl,
-                                                imageData: recipe.imageData,
+                                                imageData: draft.imageData,
                                                 prepTime: draft.prepTime.isEmpty ? recipe.prepTime : draft.prepTime,
                                                 cookTime: draft.cookTime.isEmpty ? recipe.cookTime : draft.cookTime,
                                                 totalTime: draft.totalTime.isEmpty ? recipe.totalTime : draft.totalTime,
@@ -1672,6 +1674,7 @@ struct EditRecipeSheet: View {
     }
 
     struct Draft {
+        var imageData: Data?
         var title: String
         var servings: Int?
         var prepTime: String
@@ -1696,6 +1699,8 @@ struct EditRecipeSheet: View {
     @State private var notes: String
     @State private var ingredients: [DraftIngredient]
     @State private var instructions: [DraftInstruction]
+    @State private var imageData: Data?
+    @State private var selectedPhoto: PhotosPickerItem?
 
     // macOS sidebar selection
     #if os(macOS)
@@ -1767,12 +1772,14 @@ struct EditRecipeSheet: View {
                 .sorted { $0.stepNumber < $1.stepNumber }
                 .map { DraftInstruction(text: $0.text) }
         )
+        _imageData = State(initialValue: recipe.imageData)
     }
 
     // MARK: - Save helper
 
     private func performSave() {
         let draft = Draft(
+            imageData: imageData,
             title: title.trimmingCharacters(in: .whitespaces).isEmpty
                 ? recipe.title : title.trimmingCharacters(in: .whitespaces),
             servings: servings,
@@ -1841,6 +1848,48 @@ struct EditRecipeSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 editorSectionHeader("Title & Info")
+
+                // Photo
+                GroupBox("Photo") {
+                    VStack(spacing: 10) {
+                        if let imageData {
+                            #if canImport(UIKit)
+                            if let uiImage = UIImage(data: imageData) {
+                                Image(uiImage: uiImage)
+                                    .resizable().scaledToFill()
+                                    .frame(height: 160).frame(maxWidth: .infinity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            #else
+                            if let nsImage = NSImage(data: imageData) {
+                                Image(nsImage: nsImage)
+                                    .resizable().scaledToFill()
+                                    .frame(height: 160).frame(maxWidth: .infinity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            #endif
+                        }
+                        HStack {
+                            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                Label(imageData == nil ? "Add Photo" : "Change Photo", systemImage: "camera.fill")
+                            }
+                            .onChange(of: selectedPhoto) { _, newItem in
+                                Task {
+                                    if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                        imageData = data
+                                    }
+                                }
+                            }
+                            if imageData != nil {
+                                Spacer()
+                                Button("Remove", role: .destructive) {
+                                    imageData = nil
+                                    selectedPhoto = nil
+                                }
+                            }
+                        }
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Recipe Title")
@@ -2116,6 +2165,60 @@ struct EditRecipeSheet: View {
 
     private var iosTitleInfoSection: some View {
         VStack(alignment: .leading, spacing: 24) {
+            // Photo
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Photo")
+                    .font(.appSubheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                VStack(spacing: 10) {
+                    if let imageData {
+                        #if canImport(UIKit)
+                        if let uiImage = UIImage(data: imageData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 180)
+                                .frame(maxWidth: .infinity)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        #else
+                        if let nsImage = NSImage(data: imageData) {
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 180)
+                                .frame(maxWidth: .infinity)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        #endif
+                    }
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Label(imageData == nil ? "Add Photo" : "Change Photo", systemImage: "camera.fill")
+                            .font(.appSubheadline.weight(.medium))
+                            .foregroundStyle(Color("AccentGreen"))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color("AccentGreen").opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .onChange(of: selectedPhoto) { _, newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                imageData = data
+                            }
+                        }
+                    }
+                    if imageData != nil {
+                        Button("Remove Photo", role: .destructive) {
+                            imageData = nil
+                            selectedPhoto = nil
+                        }
+                        .font(.appSubheadline)
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Recipe Title")
                     .font(.appSubheadline.weight(.medium))

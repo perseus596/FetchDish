@@ -589,12 +589,33 @@ enum ExportImportService {
                     let cleaned = line.replacingOccurrences(of: "^\\d+[.)\\s]\\s*", with: "", options: .regularExpression)
                         .trimmingCharacters(in: .whitespaces)
                     if !cleaned.isEmpty {
-                        // Check if this line starts a new numbered step
                         let startsNewStep = line.range(of: "^\\d+[.)\\s]", options: .regularExpression) != nil
+
+                        // Stop joining if this line looks like a new recipe title or section header:
+                        // - Matches "NN RecipeName" pattern (page number + title, e.g. "30 Roasted Vegetables")
+                        // - Looks like an ingredient (starts with a number/fraction followed by a unit word)
+                        let isPageNumberTitle = cleaned.range(of: #"^\d{1,2}\s+[A-Z][a-zA-Z]"#, options: .regularExpression) != nil
+                        let words = cleaned.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                        let isShortTitle = words.count <= 5 &&
+                            (cleaned.first?.isUppercase == true) &&
+                            !cleaned.hasSuffix(".") &&
+                            !cleaned.hasSuffix(",") &&
+                            !cleaned.contains(" and ") &&
+                            !cleaned.contains(" or ") &&
+                            !cleaned.contains(" with ") &&
+                            !cleaned.contains(" to ") &&
+                            cleaned.range(of: #"^\d"#, options: .regularExpression) == nil
+                        let isIngredientLine = cleaned.range(of: #"^[\d½¼¾⅓⅔⅛]"#, options: .regularExpression) != nil
+                        let looksLikeNewRecipeContent = isPageNumberTitle || isIngredientLine
+
                         if startsNewStep || instructions.isEmpty {
                             instructions.append(cleaned)
+                        } else if looksLikeNewRecipeContent {
+                            // This line belongs to a new recipe — stop joining, don't append at all
+                            // (it will be handled by a separate recipe block)
+                            break
                         } else {
-                            // Continuation line — join to previous instruction
+                            // Genuine continuation line — join to previous instruction
                             instructions[instructions.count - 1] += " " + cleaned
                         }
                     }
@@ -843,6 +864,17 @@ enum ExportImportService {
                    !trimmedLine.lowercased().contains("serving") &&
                    trimmedLine.first?.isUppercase == true {
                     lastPotentialTitle = trimmedLine
+                }
+                // Detect "NN RecipeName" pattern — page number followed by title
+                // e.g. "30 Roasted Vegetables", "27 Skillet Mac and Cheese"
+                if line.range(of: #"^\d{1,2}\s+[A-Z][a-zA-Z\s&,]{3,}"#, options: .regularExpression) != nil {
+                    // This looks like a new recipe title from the PDF page footer/header
+                    // Update lastPotentialTitle so the next "Ingredients" block picks it up
+                    let titlePart = line.replacingOccurrences(of: #"^\d{1,2}\s+"#, with: "", options: .regularExpression)
+                        .trimmingCharacters(in: .whitespaces)
+                    if titlePart.count > 3 {
+                        lastPotentialTitle = titlePart
+                    }
                 }
                 currentBlock.append(line)
             }
