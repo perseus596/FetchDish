@@ -416,9 +416,27 @@ struct ProfileView: View {
                             .clipShape(Capsule())
                     }
                 } else {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Color("AccentGreen"))
-                        .font(.title2)
+                    ZStack {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 1.0, green: 0.92, blue: 0.4),
+                                        Color(red: 0.95, green: 0.75, blue: 0.1),
+                                        Color(red: 0.8, green: 0.55, blue: 0.0)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .shadow(color: Color(red: 1.0, green: 0.8, blue: 0.0).opacity(0.6), radius: 8, y: 2)
+                        Image(systemName: "checkmark.seal")
+                            .font(.system(size: 32))
+                            .foregroundStyle(
+                                Color(red: 1.0, green: 0.95, blue: 0.6).opacity(0.4)
+                            )
+                    }
                 }
             }
             .padding(.horizontal, 16)

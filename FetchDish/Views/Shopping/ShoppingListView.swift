@@ -12,6 +12,13 @@ struct ShoppingListView: View {
     @State private var toastMessage = ""
     @State private var navigateToLibrary = false
 
+    @AppStorage("appearance") private var appearance: String = "system"
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool {
+        appearance == "dark" || (appearance == "system" && colorScheme == .dark)
+    }
+
     private var groupedItems: [(String, [ShoppingListItem])] {
         let grouped = Dictionary(grouping: items, by: { $0.category })
         return grouped.sorted { $0.key < $1.key }
@@ -23,11 +30,13 @@ struct ShoppingListView: View {
 
     private var shoppingBackground: some View {
         ZStack {
-            Color(red: 1.0, green: 0.98, blue: 0.92)
+            isDark
+                ? Color(red: 0.10, green: 0.08, blue: 0.06)
+                : Color(red: 1.0, green: 0.98, blue: 0.92)
             Image("ShoppingListBackground")
                 .resizable()
                 .scaledToFill()
-                .opacity(0.5)
+                .opacity(isDark ? 0.15 : 0.5)
         }
         #if os(iOS)
         .ignoresSafeArea()
@@ -165,7 +174,7 @@ struct ShoppingListView: View {
                     HStack {
                         Text("\(items.count) item\(items.count == 1 ? "" : "s")")
                             .font(.appSubheadline)
-                            .foregroundStyle(Color(red: 0.2, green: 0.2, blue: 0.2))
+                            .foregroundStyle(isDark ? Color.white.opacity(0.85) : Color(red: 0.2, green: 0.2, blue: 0.2))
                         Spacer()
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
@@ -182,7 +191,7 @@ struct ShoppingListView: View {
                                 .foregroundStyle(Color("AccentGreen"))
                         }
                     }
-                    .listRowBackground(Color(red: 1.0, green: 0.98, blue: 0.94).opacity(0.96))
+                    .listRowBackground(isDark ? Color(red: 0.18, green: 0.14, blue: 0.10).opacity(0.96) : Color(red: 1.0, green: 0.98, blue: 0.94).opacity(0.96))
                 }
 
                 ForEach(groupedItems, id: \.0) { category, categoryItems in
@@ -197,7 +206,7 @@ struct ShoppingListView: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(item.isChecked ? Color("AccentGreen") : Color(red: 0.4, green: 0.4, blue: 0.4))
+                                        .foregroundStyle(item.isChecked ? Color("AccentGreen") : (isDark ? Color.white.opacity(0.5) : Color(red: 0.4, green: 0.4, blue: 0.4)))
                                         .font(.title2)
 
                                     VStack(alignment: .leading, spacing: 3) {
@@ -205,18 +214,18 @@ struct ShoppingListView: View {
                                             .strikethrough(item.isChecked)
                                             .opacity(item.isChecked ? 0.4 : 1)
                                             .font(.appCallout.weight(.medium))
-                                            .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
+                                            .foregroundStyle(isDark ? Color.white.opacity(0.92) : Color(red: 0.1, green: 0.1, blue: 0.1))
 
                                         Text(item.recipeName)
                                             .font(.appFootnote)
-                                            .foregroundStyle(Color(red: 0.35, green: 0.3, blue: 0.25))
+                                            .foregroundStyle(isDark ? Color.white.opacity(0.5) : Color(red: 0.35, green: 0.3, blue: 0.25))
                                     }
 
                                     Spacer()
                                 }
                             }
                             .buttonStyle(.plain)
-                            .listRowBackground(Color(red: 1.0, green: 0.98, blue: 0.94).opacity(0.96))
+                            .listRowBackground(isDark ? Color(red: 0.18, green: 0.14, blue: 0.10).opacity(0.96) : Color(red: 1.0, green: 0.98, blue: 0.94).opacity(0.96))
                         }
                         .onDelete { offsets in
                             for offset in offsets {

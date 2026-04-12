@@ -9,7 +9,7 @@ struct WhatCanICookView: View {
     @State private var selectedCuisines: Set<String> = []
     @State private var selectedMoods: Set<String> = []
     @State private var searchText = ""
-    @State private var showCategorized = false
+    @State private var showCategorized = true
 
     // MARK: - Computed Data
 
