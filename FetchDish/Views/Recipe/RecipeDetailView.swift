@@ -58,6 +58,8 @@ struct RecipeDetailView: View {
     @State private var activeStep: Int? = nil
     @State private var servingMultiplier: Double = 1.0
     @State private var showShareSheet = false
+    @State private var showShareCard = false
+    @State private var isRenderingCard = false
     @State private var showAddToShopping = false
     @State private var showDeleteConfirm = false
     @State private var toastMessage = ""
@@ -561,6 +563,7 @@ struct RecipeDetailView: View {
                 .popover(isPresented: $showConverter, arrowEdge: .top) {
                     UnitConverterView(servingMultiplier: servingMultiplier)
                 }
+
                 #endif
 
                 // Actions menu
@@ -610,6 +613,20 @@ struct RecipeDetailView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+            #if os(macOS)
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    shareRecipeCard(recipe: recipe)
+                } label: {
+                    if isRenderingCard {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Share Card", systemImage: "square.and.arrow.up")
+                    }
+                }
+                .disabled(isRenderingCard)
+            }
+            #endif
         }
         .confirmationDialog(
             "Delete \(recipe.title)?",
@@ -631,17 +648,20 @@ struct RecipeDetailView: View {
         }
         .overlay(alignment: .bottom) {
             if showToast {
-                ToastView(message: toastMessage)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { showToast = false }
-                        }
-                    }
-                    .padding(.bottom, 100)
+                ToastView(message: toastMessage) {
+                    withAnimation { showToast = false }
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.bottom, 100)
             }
         }
         .animation(.easeInOut, value: showToast)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if showToast {
+                withAnimation { showToast = false }
+            }
+        }
         .onDisappear {
             scrollState.stopAutoScroll()
             #if canImport(UIKit)
@@ -733,6 +753,23 @@ struct RecipeDetailView: View {
         }
         #endif
     }
+
+    #if os(macOS)
+    @MainActor
+    private func shareRecipeCard(recipe: Recipe) {
+        guard !isRenderingCard else { return }
+        isRenderingCard = true
+        if let data = RecipeCardRenderer.render(recipe: recipe),
+           let image = NSImage(data: data) {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.writeObjects([image])
+            toastMessage = "Recipe card copied! Paste into Instagram, Facebook or Messages."
+            showToast = true
+        }
+        isRenderingCard = false
+    }
+    #endif
 
     @ViewBuilder
     private func recipeImage(_ data: Data) -> some View {

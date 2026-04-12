@@ -236,14 +236,11 @@ struct SettingsView: View {
             }
             .overlay(alignment: .bottom) {
                 if showToast {
-                    ToastView(message: toastMessage)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                withAnimation { showToast = false }
-                            }
-                        }
-                        .padding(.bottom, 100)
+                    ToastView(message: toastMessage) {
+                        withAnimation { showToast = false }
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.bottom, 100)
                 }
             }
             .animation(.easeInOut, value: showToast)
