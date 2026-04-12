@@ -493,6 +493,7 @@ struct RecipeDetailView: View {
                 ScrollView {
                     recipeBodyContent(recipe)
                 }
+                .scrollIndicators(.visible)
                 .onAppear {
                     scrollState.viewportHeight = viewportGeo.size.height
                 }
@@ -533,16 +534,31 @@ struct RecipeDetailView: View {
                             Image(systemName: "tortoise")
                                 .font(.system(size: 18))
                                 .foregroundStyle(.secondary)
-                            Slider(value: Binding(
-                                get: { Double(scrollState.autoScrollSpeed) },
-                                set: { scrollState.autoScrollSpeed = Int($0.rounded()) }
-                            ), in: 0...4, step: 1)
-                            .tint(Color("AccentGreen"))
+                            ZStack {
+                                Capsule()
+                                    .fill(Color.primary.opacity(0.18))
+                                    .frame(height: 4)
+                                Slider(value: Binding(
+                                    get: { Double(scrollState.autoScrollSpeed) },
+                                    set: { scrollState.autoScrollSpeed = Int($0.rounded()) }
+                                ), in: 0...4, step: 1)
+                                .tint(Color("AccentGreen"))
+                            }
                             .frame(minWidth: 200)
                             Image(systemName: "hare")
                                 .font(.system(size: 18))
                                 .foregroundStyle(.secondary)
                         }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.secondary.opacity(0.25))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(Color.secondary.opacity(0.4), lineWidth: 0.5)
+                                )
+                        )
                     }
                 }
             }
@@ -1299,10 +1315,17 @@ struct CookModeScrollIndicator: View {
             EmptyView()
         } else {
             GeometryReader { _ in
+                // Subtle track background
+                Capsule()
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(width: 6, height: viewportHeight - 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.trailing, 7)
+                    .padding(.top, 8)
                 // Thumb capsule positioned via offset so the hit-test frame stays
                 // exactly the thumb size and does not swallow the whole track.
                 Capsule()
-                    .fill(Color.white.opacity(isDragging ? 0.9 : 0.65))
+                    .fill(Color.primary.opacity(isDragging ? 0.6 : 0.4))
                     .frame(width: isDragging ? 14 : 12, height: thumbHeight)
                     .offset(y: thumbY)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
@@ -1738,6 +1761,9 @@ struct EditRecipeSheet: View {
     @State private var instructions: [DraftInstruction]
     @State private var imageData: Data?
     @State private var selectedPhoto: PhotosPickerItem?
+    #if os(macOS)
+    @State private var showFilePicker = false
+    #endif
 
     // macOS sidebar selection
     #if os(macOS)
@@ -1907,6 +1933,31 @@ struct EditRecipeSheet: View {
                             #endif
                         }
                         HStack {
+                            #if os(macOS)
+                            Button {
+                                let panel = NSOpenPanel()
+                                panel.allowedContentTypes = [.image]
+                                panel.allowsMultipleSelection = false
+                                panel.canChooseDirectories = false
+                                if panel.runModal() == .OK, let url = panel.url,
+                                   let data = try? Data(contentsOf: url) {
+                                    imageData = data
+                                }
+                            } label: {
+                                Label(imageData == nil ? "Browse Files…" : "Change Photo", systemImage: "folder")
+                            }
+                            Divider().frame(height: 16)
+                            PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                Label("Photos Library", systemImage: "photo")
+                            }
+                            .onChange(of: selectedPhoto) { _, newItem in
+                                Task {
+                                    if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                        imageData = data
+                                    }
+                                }
+                            }
+                            #else
                             PhotosPicker(selection: $selectedPhoto, matching: .images) {
                                 Label(imageData == nil ? "Add Photo" : "Change Photo", systemImage: "camera.fill")
                             }
@@ -1917,6 +1968,7 @@ struct EditRecipeSheet: View {
                                     }
                                 }
                             }
+                            #endif
                             if imageData != nil {
                                 Spacer()
                                 Button("Remove", role: .destructive) {

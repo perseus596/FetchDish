@@ -193,7 +193,67 @@ enum ExportImportService {
             }
         }
         #else
-        return nil
+        // macOS implementation using Core Graphics + CTFramesetter for proper pagination
+        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792) // US Letter
+        let margin: CGFloat = 50
+        let textRect = CGRect(x: margin, y: margin,
+                              width: pageRect.width - margin * 2,
+                              height: pageRect.height - margin * 2)
+
+        let pdfData = NSMutableData()
+        guard let consumer = CGDataConsumer(data: pdfData as CFMutableData) else { return nil }
+
+        var mediaBox = pageRect
+        let contextOptions: CFDictionary = [
+            kCGPDFContextCreator: "FetchDish",
+            kCGPDFContextTitle: "Recipe Collection"
+        ] as CFDictionary
+        guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, contextOptions) else {
+            return nil
+        }
+
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = 4
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 11),
+            .paragraphStyle: style,
+            .foregroundColor: NSColor.black
+        ]
+
+        // Build full text: each recipe separated by a page-break marker we handle manually
+        for recipe in recipes {
+            let recipeText = recipeAsText(recipe, servingMultiplier: 1.0)
+            let attributed = NSAttributedString(string: recipeText, attributes: attributes)
+            let framesetter = CTFramesetterCreateWithAttributedString(attributed as CFAttributedString)
+
+            var textPosition = 0
+            let totalLength = attributed.length
+
+            while textPosition < totalLength {
+                context.beginPage(mediaBox: &mediaBox)
+
+                // White background
+                context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+                context.fill(pageRect)
+
+                let path = CGPath(rect: textRect, transform: nil)
+                let range = CFRange(location: textPosition, length: 0)
+                let frame = CTFramesetterCreateFrame(framesetter, range, path, nil)
+
+                CTFrameDraw(frame, context)
+
+                let visibleRange = CTFrameGetVisibleStringRange(frame)
+                textPosition += visibleRange.length
+
+                context.endPage()
+
+                if visibleRange.length == 0 { break } // safety: avoid infinite loop
+            }
+        }
+
+        context.closePDF()
+        return pdfData as Data
         #endif
     }
 
