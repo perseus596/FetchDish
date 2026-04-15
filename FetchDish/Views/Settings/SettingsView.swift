@@ -379,7 +379,7 @@ struct ProUpgradeSheet: View {
                         ProStatus.unlockPro()
                         dismiss()
                     } label: {
-                        Text("Unlock Pro — $4.99")
+                        Text("Unlock Pro — \(ProManager.shared.product.map { $0.displayPrice } ?? "$19.99")")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)

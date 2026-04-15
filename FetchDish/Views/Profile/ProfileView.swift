@@ -15,6 +15,8 @@ struct ProfileView: View {
     @AppStorage("cookModeFontSize") private var cookModeFontSize: Double = 1.4
     @AppStorage("appFontScale") private var appFontScale: Double = 1.0
     @State private var hasSeeded = false
+    @State private var proManager = ProManager.shared
+    @State private var showUpgradePrompt = false
 
     @State private var showExportSheet = false
     @State private var showImportSheet = false
@@ -193,22 +195,47 @@ struct ProfileView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .padding(.horizontal, 4)
 
-            VStack(spacing: 16) {
-                allergiesContent
-                Divider().overlay(.white.opacity(0.2))
-                dietaryContent
+            ZStack {
+                // Section content — always rendered so layout is preserved
+                VStack(spacing: 16) {
+                    allergiesContent
+                    Divider().overlay(.white.opacity(0.2))
+                    dietaryContent
+                }
+                .padding(20)
+                .background {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.black.opacity(0.2))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.ultraThinMaterial.opacity(0.3))
+                        )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+                .disabled(!proManager.isPro)
+                .opacity(proManager.isPro ? 1.0 : 0.4)
+
+                // Pro lock overlay
+                if !proManager.isPro {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.primary.opacity(0.06))
+                        .overlay(
+                            VStack(spacing: 8) {
+                                ProBadgeView()
+                                Text("Upgrade to Pro to set dietary preferences and allergies")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                            }
+                        )
+                        .onTapGesture { showUpgradePrompt = true }
+                }
             }
-            .padding(20)
-            .background {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.black.opacity(0.2))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(.ultraThinMaterial.opacity(0.3))
-                    )
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+        }
+        .sheet(isPresented: $showUpgradePrompt) {
+            UpgradePromptView(triggerMessage: "Dietary profiles are a Pro feature.")
         }
     }
 

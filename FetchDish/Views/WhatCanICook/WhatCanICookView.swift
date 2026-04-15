@@ -10,6 +10,8 @@ struct WhatCanICookView: View {
     @State private var selectedMoods: Set<String> = []
     @State private var searchText = ""
     @State private var showCategorized = true
+    @State private var proManager = ProManager.shared
+    @State private var showUpgradePrompt = false
 
     // MARK: - Computed Data
 
@@ -90,6 +92,9 @@ struct WhatCanICookView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
         #endif
+        .sheet(isPresented: $showUpgradePrompt) {
+            UpgradePromptView(triggerMessage: "Unlock unlimited ingredients with Pro.")
+        }
     }
 
     // MARK: - Empty State
@@ -186,6 +191,15 @@ struct WhatCanICookView: View {
                 categorizedIngredientsView
             } else {
                 alphabeticalIngredientsView
+            }
+
+            // Free-tier limit hint
+            if !proManager.isPro {
+                Text("Free: up to 4 ingredients • Pro: unlimited")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal)
             }
         }
     }
@@ -308,6 +322,10 @@ struct WhatCanICookView: View {
             if selectedIngredients.contains(name) {
                 selectedIngredients.remove(name)
             } else {
+                if !proManager.canSelectMoreIngredients(currentCount: selectedIngredients.count) {
+                    showUpgradePrompt = true
+                    return
+                }
                 selectedIngredients.insert(name)
             }
             HapticManager.selection()

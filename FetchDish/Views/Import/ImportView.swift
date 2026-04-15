@@ -10,6 +10,8 @@ struct ImportView: View {
     @State private var toastMessage = ""
     @State private var showManualEntry = false
     @State private var showFileImporter = false
+    @State private var showUpgradePrompt = false
+    @State private var proManager = ProManager.shared
 
     private static let heroImages = ["ImportHero1", "ImportHero2", "ImportHero3"]
     private let currentHeroImage = heroImages.randomElement()!
@@ -179,9 +181,9 @@ struct ImportView: View {
                 RecipePreviewSheet(
                     parsed: parsed,
                     onSave: { editedTitle in
-                        if !ProStatus.canSaveMore(currentCount: recipes.count) {
-                            toastMessage = "Free limit reached! Upgrade to save more."
-                            showToast = true
+                        if !proManager.canSaveMoreRecipes(currentCount: recipes.count) {
+                            viewModel.showPreview = false
+                            showUpgradePrompt = true
                             return
                         }
                         Task {
@@ -200,6 +202,9 @@ struct ImportView: View {
         }
         .sheet(isPresented: $showManualEntry) {
             ManualRecipeEntryView()
+        }
+        .sheet(isPresented: $showUpgradePrompt) {
+            UpgradePromptView(triggerMessage: "You've reached the 5-recipe limit.")
         }
         .fileImporter(
             isPresented: $showFileImporter,
@@ -240,9 +245,8 @@ struct ImportView: View {
         
         do {
             let currentCount = (try? modelContext.fetch(FetchDescriptor<Recipe>()))?.count ?? 0
-            if !ProStatus.isPro && currentCount >= ProStatus.freeRecipeLimit {
-                toastMessage = "Free limit reached! Upgrade to import more."
-                showToast = true
+            if !proManager.canSaveMoreRecipes(currentCount: currentCount) {
+                showUpgradePrompt = true
                 return
             }
 

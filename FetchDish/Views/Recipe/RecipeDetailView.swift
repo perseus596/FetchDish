@@ -78,6 +78,7 @@ struct RecipeDetailView: View {
     @State private var showProUpgradeForEdit = false
     @State private var showProUpgradeForMyRecipe = false
     @State private var ingredientsExpanded: Bool = true
+    @State private var proManager = ProManager.shared
     #if os(macOS)
     @State private var showConverter = false
     #endif
@@ -531,22 +532,30 @@ struct RecipeDetailView: View {
                                 .foregroundStyle(scrollState.autoScrollPlaying ? Color("Terracotta") : Color("AccentGreen"))
                         }
 
-                        // Speed slider (tortoise → hare)
+                        // Speed slider (tortoise → hare) — Pro feature
                         HStack(spacing: 6) {
                             Image(systemName: "tortoise")
                                 .font(.system(size: 18))
                                 .foregroundStyle(.secondary)
-                            ZStack {
-                                Capsule()
-                                    .fill(Color.primary.opacity(0.18))
-                                    .frame(height: 4)
-                                Slider(value: Binding(
-                                    get: { Double(scrollState.autoScrollSpeed) },
-                                    set: { scrollState.autoScrollSpeed = Int($0.rounded()) }
-                                ), in: 0...4, step: 1)
-                                .tint(Color("AccentGreen"))
+                            ZStack(alignment: .trailing) {
+                                ZStack {
+                                    Capsule()
+                                        .fill(Color.primary.opacity(0.18))
+                                        .frame(height: 4)
+                                    Slider(value: Binding(
+                                        get: { Double(scrollState.autoScrollSpeed) },
+                                        set: { scrollState.autoScrollSpeed = Int($0.rounded()) }
+                                    ), in: 0...4, step: 1)
+                                    .tint(Color("AccentGreen"))
+                                    .disabled(!proManager.isPro)
+                                    .opacity(proManager.isPro ? 1.0 : 0.4)
+                                }
+                                .frame(minWidth: 200)
+                                if !proManager.isPro {
+                                    ProBadgeView(compact: true)
+                                        .offset(x: -4)
+                                }
                             }
-                            .frame(minWidth: 200)
                             Image(systemName: "hare")
                                 .font(.system(size: 18))
                                 .foregroundStyle(.secondary)

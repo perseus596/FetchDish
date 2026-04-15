@@ -69,6 +69,9 @@ struct FetchDishApp: App {
                 }
             }
             .preferredColorScheme(colorScheme)
+            .task {
+                await ProManager.shared.verifyOnLaunch()
+            }
         }
         .modelContainer(sharedModelContainer)
         #if os(macOS)
@@ -148,6 +151,7 @@ struct MacSidebarView: View {
     @Binding var isCookModeActive: Bool
     @AppStorage("appearance") private var appearance: String = "system"
     @Query private var recipes: [Recipe]
+    @State private var proManager = ProManager.shared
     @State private var showLeaveCookAlert = false
     @State private var pendingDestination: AppDestination? = nil
 
@@ -197,7 +201,7 @@ struct MacSidebarView: View {
 
             // Nav buttons
             sidebarButton("My Recipe Library",
-                          subtitle: recipes.isEmpty ? nil : "\(recipes.count) saved",
+                          subtitle: recipes.isEmpty ? nil : (proManager.isPro ? "\(recipes.count) saved" : "\(recipes.count)/\(ProManager.freeRecipeLimit) saved"),
                           icon: "book.fill", dest: .library)
             sidebarButton("Add Recipe",         icon: "plus.circle.fill",  dest: .addRecipe)
             sidebarButton("Shopping List",      icon: "cart.fill",          dest: .shoppingList)

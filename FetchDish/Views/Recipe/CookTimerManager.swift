@@ -312,6 +312,9 @@ struct CookModeTimerSidebar: View {
     @State private var customHours: Int = 0
     @State private var customMinutes: Int = 0
     @State private var customSeconds: Int = 0
+    // Pro gating
+    @State private var proManager = ProManager.shared
+    @State private var showUpgradePrompt: Bool = false
 
     // MARK: - Design tokens
     private let creamBg     = Color(red: 0.96, green: 0.93, blue: 0.87)
@@ -392,8 +395,12 @@ struct CookModeTimerSidebar: View {
                     pillView(pill: $pill)
                 }
 
-                // Custom timer "+" button
+                // Custom timer "+" button — Pro feature
                 Button {
+                    guard proManager.isPro else {
+                        showUpgradePrompt = true
+                        return
+                    }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         showCustomTimerInput = true
                     }
@@ -460,6 +467,9 @@ struct CookModeTimerSidebar: View {
         // whenever any timer's remainingSeconds changes or timers are added/removed.
         .onChange(of: timerManager.timers.map(\.remainingSeconds).reduce(0, +) + timerManager.timers.count * 1_000_000) { _, _ in
             syncPillsWithTimers()
+        }
+        .sheet(isPresented: $showUpgradePrompt) {
+            UpgradePromptView(triggerMessage: "Per-step timers are a Pro feature.")
         }
     }
 
@@ -685,13 +695,21 @@ struct CookModeTimerSidebar: View {
             Button {
                 handlePillTap(pill: pill)
             } label: {
+                let isIdle: Bool = { if case .idle = p.state { return true }; return false }()
                 dialLabel(for: p)
+                    .opacity(!proManager.isPro && isIdle ? 0.5 : 1.0)
             }
             .buttonStyle(.plain)
             .frame(width: dialSize, height: dialSize)
             .shadow(color: pillShadow, radius: 8, x: 0, y: 4)
             .scaleEffect(p.isUrgent ? pulseScale : 1.0)
             .animation(.easeInOut(duration: 0.3), value: p.isRunning)
+
+            // Pro badge overlay on idle dials for free users
+            if !proManager.isPro, case .idle = p.state {
+                ProBadgeView(compact: true)
+                    .offset(x: 4, y: -4)
+            }
 
             // X button — only shown when done
             if case .done = p.state {
@@ -862,6 +880,10 @@ struct CookModeTimerSidebar: View {
     // MARK: - Pill actions
 
     private func handlePillTap(pill: Binding<TimerPill>) {
+        guard proManager.isPro else {
+            showUpgradePrompt = true
+            return
+        }
         switch pill.wrappedValue.state {
         case .idle:
             // Start a timer via the manager

@@ -12,6 +12,7 @@ struct LibraryView: View {
     @State private var showDeleteConfirm = false
     @State private var recipeToDelete: Recipe?
     @State private var isEditing = false
+    @State private var proManager = ProManager.shared
     @AppStorage("appearance") private var appearance: String = "system"
 
     private var isDark: Bool { appearance == "dark" }
@@ -269,8 +270,8 @@ struct LibraryView: View {
 
             Spacer()
 
-            if !ProStatus.isPro {
-                Text("\(recipes.count)/\(ProStatus.freeRecipeLimit)")
+            if !proManager.isPro {
+                Text("\(recipes.count)/\(ProManager.freeRecipeLimit)")
                     .font(.appCaption)
                     .foregroundStyle(.secondary)
             }

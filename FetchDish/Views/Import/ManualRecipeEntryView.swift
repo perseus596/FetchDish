@@ -22,6 +22,8 @@ struct ManualRecipeEntryView: View {
     @State private var imageData: Data?
     @State private var showToast = false
     @State private var toastMessage = ""
+    @State private var showUpgradePrompt = false
+    @State private var proManager = ProManager.shared
 
     var body: some View {
         NavigationStack {
@@ -127,14 +129,16 @@ struct ManualRecipeEntryView: View {
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+            .sheet(isPresented: $showUpgradePrompt) {
+                UpgradePromptView(triggerMessage: "You've reached the 5-recipe limit.")
+            }
         }
     }
 
     private func saveRecipe() {
         // Check Pro limit
-        if !ProStatus.canSaveMore(currentCount: recipes.count) {
-            toastMessage = "Free limit reached! Upgrade to save more."
-            showToast = true
+        if !proManager.canSaveMoreRecipes(currentCount: recipes.count) {
+            showUpgradePrompt = true
             return
         }
 
