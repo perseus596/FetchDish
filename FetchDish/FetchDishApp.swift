@@ -68,8 +68,6 @@ struct FetchDishApp: App {
                     .animation(.easeInOut(duration: 0.6), value: hasSeenOnboarding)
                 }
             }
-            // DEV MODE: always show onboarding — remove before App Store submission
-            .onAppear { hasSeenOnboarding = false }
             .preferredColorScheme(colorScheme)
         }
         .modelContainer(sharedModelContainer)
@@ -94,6 +92,7 @@ struct FetchDishApp: App {
 struct MacRootView: View {
     @State private var selectedDestination: AppDestination? = .library
     @State private var navigationPath = NavigationPath()
+    @State private var isCookModeActive = false
     @AppStorage("appFontScale") private var appFontScale: Double = 1.0
 
     private var appDynamicTypeSize: DynamicTypeSize {
@@ -108,7 +107,7 @@ struct MacRootView: View {
 
     var body: some View {
         NavigationSplitView {
-            MacSidebarView(selected: $selectedDestination, navigationPath: $navigationPath)
+            MacSidebarView(selected: $selectedDestination, navigationPath: $navigationPath, isCookModeActive: $isCookModeActive)
                 .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
         } detail: {
             NavigationStack(path: $navigationPath) {
@@ -131,7 +130,7 @@ struct MacRootView: View {
                     }
                 }
                 .navigationDestination(for: UUID.self) { recipeId in
-                    RecipeDetailView(recipeId: recipeId, navigationPath: $navigationPath)
+                    RecipeDetailView(recipeId: recipeId, navigationPath: $navigationPath, isCookModeActive: $isCookModeActive)
                 }
             }
         }
@@ -146,8 +145,11 @@ struct MacRootView: View {
 struct MacSidebarView: View {
     @Binding var selected: AppDestination?
     @Binding var navigationPath: NavigationPath
+    @Binding var isCookModeActive: Bool
     @AppStorage("appearance") private var appearance: String = "system"
     @Query private var recipes: [Recipe]
+    @State private var showLeaveCookAlert = false
+    @State private var pendingDestination: AppDestination? = nil
 
     private var isDark: Bool { appearance == "dark" }
 
@@ -213,6 +215,19 @@ struct MacSidebarView: View {
             }
             .ignoresSafeArea()
         }
+        .alert("Leave Cooking Mode?", isPresented: $showLeaveCookAlert) {
+            Button("Stay Cooking", role: .cancel) {
+                pendingDestination = nil
+            }
+            Button("Leave Anyway", role: .destructive) {
+                isCookModeActive = false
+                selected = pendingDestination
+                navigationPath = NavigationPath()
+                pendingDestination = nil
+            }
+        } message: {
+            Text("You're currently cooking. If you leave, your progress, checked ingredients, and timers will be lost.")
+        }
     }
 
     @ViewBuilder
@@ -222,6 +237,9 @@ struct MacSidebarView: View {
         Button {
             if selected == dest {
                 navigationPath = NavigationPath()
+            } else if isCookModeActive {
+                pendingDestination = dest
+                showLeaveCookAlert = true
             } else {
                 selected = dest
             }

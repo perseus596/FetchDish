@@ -51,6 +51,7 @@ struct RecipeDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let recipeId: UUID
     @Binding var navigationPath: NavigationPath
+    @Binding var isCookModeActive: Bool
 
     @AppStorage("cookModeFontSize") private var cookModeFontSize: Double = 1.4
     @State private var recipe: Recipe?
@@ -501,6 +502,7 @@ struct RecipeDetailView: View {
         }
         .onChange(of: cookMode) { _, active in
             if !active { scrollState.reset() } else { scrollState.scrollOffset = 0 }
+            isCookModeActive = active
         }
         .onChange(of: scrollState.autoScrollPlaying) { _, playing in
             if playing { scrollState.startAutoScroll() } else { scrollState.stopAutoScroll() }
@@ -680,6 +682,7 @@ struct RecipeDetailView: View {
         }
         .onDisappear {
             scrollState.stopAutoScroll()
+            timerManager.removeAll()
             #if canImport(UIKit)
             UIApplication.shared.isIdleTimerDisabled = false
             #endif

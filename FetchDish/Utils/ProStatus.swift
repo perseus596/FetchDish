@@ -2,13 +2,13 @@ import Foundation
 import SwiftUI
 
 /// Manages the Pro upgrade status.
-/// Free tier: 25 recipes. Pro: unlimited.
+/// Free tier: 10 recipes. Pro: unlimited.
 /// For now, Pro is a simple UserDefaults flag (payment integration comes later).
 enum ProStatus {
-    static let freeRecipeLimit = 25
+    static let freeRecipeLimit = 10
 
     static var isPro: Bool {
-        get { true } // DEV MODE: always Pro — revert before App Store submission
+        get { UserDefaults.standard.bool(forKey: "isPro") }
         set { UserDefaults.standard.set(newValue, forKey: "isPro") }
     }
 

@@ -240,7 +240,7 @@ struct ImportView: View {
         
         do {
             let currentCount = (try? modelContext.fetch(FetchDescriptor<Recipe>()))?.count ?? 0
-            if !ProStatus.isPro && currentCount >= 25 {
+            if !ProStatus.isPro && currentCount >= ProStatus.freeRecipeLimit {
                 toastMessage = "Free limit reached! Upgrade to import more."
                 showToast = true
                 return

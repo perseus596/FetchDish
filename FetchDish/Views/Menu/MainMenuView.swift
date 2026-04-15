@@ -35,7 +35,7 @@ struct MainMenuView: View {
                 }
             }
             .navigationDestination(for: UUID.self) { recipeId in
-                RecipeDetailView(recipeId: recipeId, navigationPath: $path)
+                RecipeDetailView(recipeId: recipeId, navigationPath: $path, isCookModeActive: .constant(false))
             }
         }
     }
