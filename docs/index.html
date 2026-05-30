@@ -1,448 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FetchDish — No life stories. Just recipes.</title>
-<meta name="description" content="Paste a URL, get a clean recipe. Auto-scroll cooking mode, per-step timers, built-in conversion table, allergy profiles, and ingredient matching.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>">
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-  :root {
-    --bg: #1a1a2e;
-    --bg-card: #16213e;
-    --bg-feature: #0f3460;
-    --terracotta: #e07a5f;
-    --terracotta-light: #f2a68b;
-    --cream: #f4f1de;
-    --muted: #a0a0b8;
-    --white: #ffffff;
-    --radius: 12px;
-  }
 
-  html { scroll-behavior: smooth; }
+FetchDish
+No ads. No life stories. Just recipes.
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--cream);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
+Download for Mac
+iOS coming soon
+SCROLL
 
-  /* NAV */
-  nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    padding: 1rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(26, 26, 46, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(224, 122, 95, 0.15);
-  }
+Every recipe site makes you scroll through a novel before you get to the ingredients.
+FetchDish strips that out. You paste a URL, you get the recipe. Nothing else — no pop-ups, no autoplay videos, no grandmother's seven-paragraph origin story. Just what you came for.
+SEE IT IN ACTION
+Everything it does. Nothing it doesn't.
+Real screens from the Mac app — no mockups.
 
-  .nav-logo {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--white);
-    text-decoration: none;
-    letter-spacing: -0.02em;
-  }
 
-  .nav-logo span { color: var(--terracotta); }
 
-  .nav-links { display: flex; gap: 1.5rem; }
+FetchDish — Add Recipe
+￼
+EXTRACT
+Extract Instantly
+Paste any URL. FetchDish pulls the recipe — ingredients, steps, photo — and leaves the ads, pop-ups and life stories behind.
 
-  .nav-links a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.9rem;
-    transition: color 0.2s;
-  }
 
-  .nav-links a:hover { color: var(--terracotta-light); }
 
-  /* HERO */
-  .hero {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 8rem 2rem 4rem;
-    position: relative;
-    overflow: hidden;
-  }
+FetchDish — The Pantry
+￼
+LIBRARY
+Your Library, the Pantry
+Save up to 5 recipes free; unlock unlimited with Pro. No accounts, no cloud — they're yours.
+Edit any recipe in your Pantry to your taste — adjust ingredients, swap steps, make it the way you actually cook it.
 
-  .hero::before {
-    content: '';
-    position: absolute;
-    top: -40%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(224, 122, 95, 0.12) 0%, transparent 70%);
-    pointer-events: none;
-  }
 
-  .hero-icon {
-    font-size: 4rem;
-    margin-bottom: 1.5rem;
-  }
 
-  h1 {
-    font-size: clamp(2.8rem, 6vw, 4.5rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-    color: var(--white);
-    margin-bottom: 0.75rem;
-  }
+FetchDish — What Can I Cook?
+￼
+DISCOVER
+What Can I Cook?
+Tell FetchDish the cuisine and mood you're after and the ingredients you already have. It finds the match from your Pantry.
 
-  h1 span { color: var(--terracotta); }
 
-  .tagline {
-    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
-    color: var(--terracotta-light);
-    font-weight: 500;
-    margin-bottom: 1.5rem;
-    font-style: italic;
-  }
 
-  .hero-desc {
-    max-width: 560px;
-    font-size: 1.1rem;
-    color: var(--muted);
-    margin-bottom: 2.5rem;
-    line-height: 1.7;
-  }
+FetchDish — Shopping List
+￼
+SHOP
+Shopping List
+Send any recipe's ingredients straight to a shopping list — grouped by aisle, with the source recipe noted and everything checked off as you go.
 
-  /* APP STORE BADGE */
-  .badge-link {
-    display: inline-block;
-    transition: opacity 0.2s, transform 0.2s;
-  }
 
-  .badge-link:hover {
-    opacity: 0.85;
-    transform: scale(1.03);
-  }
 
-  .badge-link img {
-    height: 52px;
-    width: auto;
-  }
+FetchDish — Profile & Settings
+￼
+YOURS
+Know what's in it
+Set your dietary restrictions and allergies in Settings, and FetchDish flags any recipe that contains something you'd rather avoid.
+Paired with editable recipes in the Pantry, every dish bends to the way you eat.
+￼
+Requires macOS 14 Sonoma or later. Apple Silicon and Intel.
 
-  .badge-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
+iOS — coming soon
+FETCHDISH PRO
+$19.99
+One-time. Yours forever.
+	•	 Unlimited recipe saves  Shopping list  What Can I Cook  Free updates  No subscription
 
-  .badge-note {
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-
-  /* FEATURES */
-  .features {
-    padding: 5rem 2rem;
-    max-width: 960px;
-    margin: 0 auto;
-  }
-
-  .features h2 {
-    text-align: center;
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 3rem;
-    letter-spacing: -0.02em;
-  }
-
-  .feature-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .feature-card {
-    background: var(--bg-card);
-    border: 1px solid rgba(224, 122, 95, 0.1);
-    border-radius: var(--radius);
-    padding: 2rem 1.5rem;
-    transition: border-color 0.3s, transform 0.3s;
-  }
-
-  .feature-card:hover {
-    border-color: rgba(224, 122, 95, 0.35);
-    transform: translateY(-3px);
-  }
-
-  .feature-card .icon {
-    font-size: 1.8rem;
-    margin-bottom: 0.75rem;
-    display: block;
-  }
-
-  .feature-card h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--white);
-    margin-bottom: 0.5rem;
-  }
-
-  .feature-card p {
-    font-size: 0.92rem;
-    color: var(--muted);
-    line-height: 1.55;
-  }
-
-  /* HOW IT WORKS */
-  .how-section {
-    padding: 4rem 2rem 5rem;
-    text-align: center;
-    max-width: 700px;
-    margin: 0 auto;
-  }
-
-  .how-section h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 2.5rem;
-    letter-spacing: -0.02em;
-  }
-
-  .steps {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    text-align: left;
-  }
-
-  .step {
-    display: flex;
-    gap: 1.25rem;
-    align-items: flex-start;
-  }
-
-  .step-num {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--terracotta);
-    color: var(--white);
-    font-weight: 700;
-    font-size: 1.15rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .step-text h3 {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: var(--white);
-    margin-bottom: 0.25rem;
-  }
-
-  .step-text p {
-    font-size: 0.92rem;
-    color: var(--muted);
-  }
-
-  /* CTA */
-  .cta {
-    text-align: center;
-    padding: 4rem 2rem 5rem;
-  }
-
-  .cta h2 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 0.75rem;
-  }
-
-  .cta p {
-    color: var(--muted);
-    margin-bottom: 2rem;
-    font-size: 1.05rem;
-  }
-
-  /* FOOTER */
-  footer {
-    border-top: 1px solid rgba(224, 122, 95, 0.12);
-    padding: 2.5rem 2rem;
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
-  }
-
-  .footer-links {
-    display: flex;
-    justify-content: center;
-    gap: 1.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.25rem;
-  }
-
-  .footer-links a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.88rem;
-    transition: color 0.2s;
-  }
-
-  .footer-links a:hover { color: var(--terracotta-light); }
-
-  .footer-copy {
-    font-size: 0.82rem;
-    color: rgba(160, 160, 184, 0.6);
-  }
-
-  /* RESPONSIVE */
-  @media (max-width: 600px) {
-    nav { padding: 0.75rem 1.25rem; }
-    .nav-links { gap: 1rem; }
-    .nav-links a { font-size: 0.82rem; }
-    .hero { padding: 7rem 1.25rem 3rem; }
-    .hero-desc { font-size: 1rem; }
-    .features { padding: 3rem 1.25rem; }
-    .feature-grid { grid-template-columns: 1fr; }
-    .how-section { padding: 3rem 1.25rem 4rem; }
-    .step { gap: 1rem; }
-    .cta { padding: 3rem 1.25rem 4rem; }
-    footer { padding: 2rem 1.25rem; }
-  }
-</style>
-</head>
-<body>
-
-<!-- NAV -->
-<nav>
-  <a href="#" class="nav-logo">Fetch<span>Dish</span></a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#how">How It Works</a>
-    <a href="support.html">Support</a>
-  </div>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-icon">🍽</div>
-  <h1>Fetch<span>Dish</span></h1>
-  <p class="tagline">No life stories. Just recipes.</p>
-  <p class="hero-desc">
-    Paste a URL, get a clean recipe. Auto-scroll cooking mode, per-step timers,
-    built-in conversion table, allergy profiles, and ingredient matching — all
-    offline, ad-free, on your terms.
-  </p>
-  <div class="badge-group">
-    <a href="https://apps.apple.com/app/fetchdish/id0000000000" class="badge-link" target="_blank" rel="noopener">
-      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-mac-app-store/black/en-us?size=250x83" alt="Download on the Mac App Store">
-    </a>
-    <span class="badge-note">Available on Mac — coming soon to iPhone &amp; iPad</span>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="features" id="features">
-  <h2>Everything you need, nothing you don't</h2>
-  <div class="feature-grid">
-    <div class="feature-card">
-      <span class="icon">🔗</span>
-      <h3>Import from any URL</h3>
-      <p>Paste a link from any recipe site. FetchDish strips the clutter and saves a clean, readable recipe.</p>
-    </div>
-    <div class="feature-card">
-      <span class="icon">📜</span>
-      <h3>Auto-scroll cooking mode</h3>
-      <p>Hands-free step-by-step cooking. The recipe scrolls for you so your screen stays clean and your hands stay free.</p>
-    </div>
-    <div class="feature-card">
-      <span class="icon">⏱</span>
-      <h3>Per-step timers</h3>
-      <p>Timers are detected automatically from your recipe steps. Tap to start — no guessing, no separate app.</p>
-    </div>
-    <div class="feature-card">
-      <span class="icon">📏</span>
-      <h3>Conversion table</h3>
-      <p>Cups to grams, Fahrenheit to Celsius, tablespoons to milliliters — right there when you need it.</p>
-    </div>
-    <div class="feature-card">
-      <span class="icon">⚠️</span>
-      <h3>Allergy profiles</h3>
-      <p>Set your dietary restrictions once. Recipes flag allergens and incompatible ingredients automatically.</p>
-    </div>
-    <div class="feature-card">
-      <span class="icon">🧑‍🍳</span>
-      <h3>What can I cook?</h3>
-      <p>Enter what you have on hand. FetchDish finds matching recipes from your saved collection.</p>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section class="how-section" id="how">
-  <h2>How it works</h2>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text">
-        <h3>Copy a recipe URL</h3>
-        <p>Find a recipe you like on any website. Copy the link.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text">
-        <h3>Paste it into FetchDish</h3>
-        <p>The app extracts the recipe — ingredients, steps, times — and saves it to your library.</p>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text">
-        <h3>Cook with confidence</h3>
-        <p>Use cooking mode, timers, and your shopping list. Everything works offline.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta">
-  <h2>Ready to simplify your cooking?</h2>
-  <p>No ads. No accounts. No subscriptions required to get started.</p>
-  <a href="https://apps.apple.com/app/fetchdish/id0000000000" class="badge-link" target="_blank" rel="noopener">
-    <img src="https://tools.applemediaservices.com/api/badges/download-on-the-mac-app-store/black/en-us?size=250x83" alt="Download on the Mac App Store">
-  </a>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="footer-links">
-    <a href="privacy-policy.html">Privacy Policy</a>
-    <a href="terms.html">Terms of Use</a>
-    <a href="support.html">Support</a>
-    <a href="mailto:quieresmac@gmail.com">Contact</a>
-  </div>
-  <p class="footer-copy">&copy; 2026 FetchDish. All rights reserved.</p>
-</footer>
-
-</body>
-</html>
+Get FetchDish Pro
+￼
+Built by one person.
+Ferenc Paczka — the Software Cook — is a digital artist and independent developer based in Marin County, California.
+FetchDish began as plain frustration: every recipe he opened buried the ingredients under autoplay videos, pop-ups and a thousand-word memoir. Every site was broken the same way, and no one had fixed it. So he did.
+FetchDish never stores or takes your information. No accounts, no tracking, no cloud — your recipes live on your Mac, and only your Mac.
+FetchDish
+Privacy & Disclaimer
+Support
+© 2026 FetchDish. All rights reserved.
+FetchDish is an independent app. Not affiliated with Apple Inc.
