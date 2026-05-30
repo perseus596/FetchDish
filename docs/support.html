@@ -1,187 +1,631 @@
-￼
-FetchDish
- Support
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FetchDish — Support</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --brown:        #3D2B1A;
+    --brown-deep:   #2A1D11;
+    --brown-ink:    #1B120A;
+    --amber:        #C8882A;
+    --amber-bright: #DDA13C;
+    --amber-deep:   #A86E1E;
+    --cream:        #F5ECD7;
+    --cream-dim:    #D9CDB4;
+    --cream-faint:  #A89A80;
 
-Back to home
+    --bg:           #1B120A;
+    --bg-2:         #241810;
+    --bg-3:         #2E2013;
+    --card-solid:   #3A2A18;
+    --hairline:     #4A361F;
 
+    --shadow-card:  0 24px 60px -28px rgba(0,0,0,.75);
 
-HELP CENTER
-How can we help?
-If something isn't working the way you expected, this page walks you through it step by step. No technical knowledge needed — just find the section that matches your situation.
-ON THIS PAGE
-	•	Getting started
-	•	Free version & Pro
-	•	Recipe import
-	•	Save from Safari
-	•	Shopping List
-	•	What Can I Cook
-	•	App won't open
-	•	Night Mode
-	•	Your data & privacy
-	•	Backup & moving Macs
-	•	System requirements
-	•	Disclaimer & safety
+    --ff-serif: "Spectral", Georgia, "Times New Roman", serif;
+    --ff-sans:  -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
 
-What is FetchDish?
-FetchDish is a recipe-saving app for Mac. You find a recipe you like on any cooking website, copy the link, and paste it into FetchDish. The app saves just the recipe: the title, the ingredients, and the steps. No ads. No long stories about someone's grandmother's kitchen. Just the recipe.
-Your recipes live on your Mac. FetchDish does not create an account for you, does not store your recipes on the internet, and does not share anything with anyone.
+    --maxw: 1200px;
+    --nav-h: 70px;
+  }
 
-Getting started
-Saving your first recipe
-	1	Find a recipe you like on any cooking website — AllRecipes, Food Network, BBC Good Food, Epicurious, or anywhere else.
-	2	Copy the web address from the top of your browser (it starts with https://). Click once on the address bar to highlight it, then press ⌘ Command + C.
-	3	Open FetchDish.
-	4	Click Add Recipe in the left sidebar.
-	5	Click inside the box that appears and press ⌘ Command + V to paste the address.
-	6	FetchDish fetches the recipe. In a few seconds it appears in your library.
-That's it — your recipe is saved.
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
 
-The free version saves up to 5 recipes. To save more, upgrade to Pro for a one-time payment of $19.99 — no monthly fees, ever.
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: var(--ff-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: none;
+  }
 
-Free version & Pro
-What you get for free
-When you download FetchDish you get the full app with every feature included. The only limit is that you can save up to 5 recipes. You can use Shopping List and What Can I Cook from day one.
-What happens when you reach 5 recipes
-FetchDish lets you know you've reached the free limit and offers the option to upgrade to Pro. Your existing 5 recipes stay safe — nothing is deleted. You simply can't add more until you upgrade, or delete a saved recipe to make room.
-What Pro gives you $19.99 once
-Pro removes the 5-recipe limit and unlocks unlimited recipe storage, auto-scroll cooking mode, and all future premium features. You pay once and that's it. No subscription. No renewal. No surprises on your credit card.
-How to upgrade to Pro
-	1	Open FetchDish.
-	2	Go to Profile & Settings in the left sidebar.
-	3	Click Upgrade to Pro.
-	4	Follow the App Store prompts. Apple handles the payment using your Apple ID — the same account you use for any other App Store purchase.
-Getting Pro back after reinstalling or switching Macs
-Your Pro purchase is tied to your Apple ID, not to your Mac. You can always get it back at no extra cost.
-	1	Open FetchDish on your new or reinstalled Mac.
-	2	Go to Profile & Settings.
-	3	Click Restore Purchase.
-	4	Make sure you're signed into the same Apple ID you used when you first bought Pro.
-Not sure which Apple ID you used? Open System Settings, click your name at the very top of the left sidebar, and confirm which account is signed in.
+  /* ---------- radiating pulse cursor (shared with landing) ---------- */
+  .cursor-fx { position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none; will-change: transform; }
+  .cursor-fx .dot, .cursor-fx .ring { position: absolute; top: 0; left: 0; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; }
+  .cursor-fx .dot { background: var(--amber-bright); box-shadow: 0 0 0 1.5px rgba(18,12,6,.6), 0 0 12px rgba(221,161,60,.65); transition: transform .16s ease-out, background .16s; }
+  .cursor-fx .ring { border: 2px solid var(--amber-bright); opacity: 0; animation: cursorPulse 1.8s ease-out infinite; }
+  @keyframes cursorPulse { 0% { transform: scale(.7); opacity: .6; } 80% { opacity: 0; } 100% { transform: scale(3.6); opacity: 0; } }
+  .cursor-fx.is-hover .dot { transform: scale(1.7); background: #fff; }
+  body.cursor-hide .cursor-fx { opacity: 0; }
+  @media (hover: none) { body { cursor: auto; } .cursor-fx { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .cursor-fx .ring { animation: none; } }
 
-Billing & refunds: FetchDish uses Apple's App Store for all payments. The developer can't process refunds directly. For any billing issue or refund, visit reportaproblem.apple.com and sign in with your Apple ID.
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    opacity: .035; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::selection { background: var(--amber); color: var(--brown-ink); }
 
-Recipe import
-A recipe saved, but some ingredients or steps are missing
-FetchDish reads the recipe data that cooking websites publish. Most major sites work perfectly. A small number format their recipes in unusual ways that make complete extraction difficult.
-If your recipe came in incomplete, the simplest fix is to search for the same recipe on a different website and import that version instead. The recipe is the same — the source is just more readable.
-A recipe didn't save at all
-Work through these in order:
-	1	Check your internet connection. FetchDish needs internet to fetch a recipe the first time. After that it's saved on your Mac and you don't need internet to view it.
-	2	Make sure the address you pasted is a direct link to the recipe page itself — not a search result or a website homepage.
-	3	Open the same link in Safari and confirm the page loads. If it asks you to log in or subscribe to see the recipe, FetchDish can't access it either — no app can read content behind a login wall.
-	4	If the page loads fine in Safari but still won't import, that website is likely blocking automated requests. That's the website's decision, not a FetchDish problem. Search for the same recipe on a site like AllRecipes or BBC Good Food and import from there.
+  /* ===================== TOP NAV ===================== */
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    height: var(--nav-h);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    background: rgba(20,13,7,.82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .topnav__brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--cream); }
+  .topnav__brand img { width: 34px; height: 34px; border-radius: 9px; }
+  .topnav__brand b { font-family: var(--ff-serif); font-weight: 700; font-size: 22px; letter-spacing: -.01em; }
+  .topnav__brand span { color: var(--cream-faint); font-weight: 400; font-size: 22px; font-family: var(--ff-serif); margin-left: -4px; }
+  .topnav__back { display: inline-flex; align-items: center; gap: 8px; color: var(--cream-dim); text-decoration: none; font-size: 14.5px; font-weight: 500; transition: color .2s; }
+  .topnav__back svg { width: 16px; height: 16px; }
+  .topnav__back:hover { color: var(--amber-bright); }
 
-Save a recipe directly from Safari
-FetchDish includes a Share Extension, so you can send a recipe to FetchDish directly from Safari without copying and pasting the address manually.
-How to use it
-	1	Find a recipe in Safari.
-	2	Click the Share button in the Safari toolbar — it looks like a box with an arrow pointing upward.
-	3	Look for FetchDish in the list of options that appears.
-	4	Click FetchDish. The recipe is sent to your library automatically.
-FetchDish doesn't appear in my Share menu
-	1	Click the Share button in Safari.
-	2	Scroll to the bottom of the list and click More.
-	3	Find FetchDish in the list and turn it on.
-	4	Close the window. FetchDish now appears in your Share menu every time.
+  /* ===================== HERO BAND ===================== */
+  .s-hero { position: relative; overflow: hidden; padding: clamp(72px, 11vh, 130px) 32px clamp(56px, 8vh, 84px); text-align: center; border-bottom: 1px solid var(--hairline); }
+  .s-hero__bg { position: absolute; inset: 0; background: url("assets/hero.png") center 38% / cover no-repeat; }
+  .s-hero__scrim {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(34% 30% at 50% 52%, rgba(20,13,7,.78) 0%, rgba(20,13,7,.45) 60%, rgba(20,13,7,0) 100%),
+      radial-gradient(58% 78% at 50% 50%, rgba(20,13,7,.6) 0%, rgba(20,13,7,.32) 60%, rgba(20,13,7,.16) 100%),
+      linear-gradient(180deg, rgba(20,13,7,.5) 0%, rgba(20,13,7,.12) 45%, rgba(20,13,7,.82) 100%);
+  }
+  .s-hero__eyebrow, .s-hero h1, .s-hero p { position: relative; z-index: 2; }
+  .s-hero__eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: .26em; text-transform: uppercase; color: var(--amber-bright); margin-bottom: 16px; text-shadow: 0 1px 12px rgba(0,0,0,.6); }
+  .s-hero h1 { font-family: var(--ff-serif); font-weight: 800; font-size: clamp(40px, 6vw, 72px); line-height: 1.02; letter-spacing: -.02em; color: #fff; text-shadow: 0 3px 30px rgba(0,0,0,.55); }
+  .s-hero p { max-width: 600px; margin: 22px auto 0; font-size: clamp(16px, 1.8vw, 19px); color: rgba(245,236,215,.92); line-height: 1.65; text-wrap: balance; text-shadow: 0 2px 16px rgba(0,0,0,.55); }
 
-Shopping List
-When you open any saved recipe, you can add its ingredients to your Shopping List with one tap. You can do this for multiple recipes at once — the list gathers everything together so you can take it to the store.
-You manage the list yourself. When you've bought something, you check it off or remove it. FetchDish does not clear the list automatically.
-An ingredient looks strange or is formatted oddly
-This reflects exactly how the recipe website wrote it — FetchDish copies the ingredient as published. You can edit any item directly in the Shopping List by clicking on it.
+  /* ===================== LAYOUT ===================== */
+  .shell { max-width: var(--maxw); margin: 0 auto; padding: clamp(36px, 6vh, 64px) 32px clamp(60px, 9vh, 110px); display: grid; grid-template-columns: 248px 1fr; gap: clamp(40px, 6vw, 88px); align-items: start; position: relative; z-index: 2; }
 
-What Can I Cook
-Open What Can I Cook and type in the ingredients you have at home. FetchDish looks through your saved recipes and shows which ones you can make with those ingredients.
+  /* ---- sticky TOC ---- */
+  .toc { position: sticky; top: calc(var(--nav-h) + 28px); align-self: start; }
+  .toc__label { font-size: 11.5px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--cream-faint); margin: 0 0 14px 14px; }
+  .toc ul { list-style: none; }
+  .toc a { display: block; padding: 8px 14px; border-left: 2px solid transparent; color: var(--cream-dim); text-decoration: none; font-size: 14.5px; line-height: 1.35; border-radius: 0 8px 8px 0; transition: color .2s, background .2s, border-color .2s; }
+  .toc a:hover { color: var(--cream); background: rgba(255,255,255,.03); }
+  .toc a.active { color: var(--amber-bright); border-left-color: var(--amber); background: rgba(200,136,42,.08); font-weight: 600; }
 
-What Can I Cook only searches recipes you've already saved — it does not search the internet. If you have 4 saved recipes and enter 10 ingredients, you'll only ever see results from those 4. The more recipes you save, the more useful it becomes.
-No results are showing
-This means none of your saved recipes match the ingredients you typed. Try entering fewer ingredients to broaden the search, and consider saving more recipes to give the feature more to work with.
+  /* ===================== CONTENT ===================== */
+  .content { min-width: 0; }
+  .content > section { scroll-margin-top: calc(var(--nav-h) + 24px); padding-bottom: clamp(40px, 6vh, 64px); margin-bottom: clamp(40px, 6vh, 64px); border-bottom: 1px solid var(--hairline); }
+  .content > section:last-of-type { border-bottom: none; margin-bottom: 0; }
 
-Suggestions only
-What Can I Cook doesn't know about food allergies, dietary needs, how much of an ingredient you have, or whether something in your fridge has gone bad. Always read a recipe fully before you start cooking.
+  .sec-head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
+  .sec-head__icon { flex: none; width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, rgba(200,136,42,.22), rgba(200,136,42,.07)); border: 1px solid rgba(221,161,60,.3); color: var(--amber-bright); }
+  .sec-head__icon svg { width: 24px; height: 24px; }
+  .content h2 { font-family: var(--ff-serif); font-weight: 700; font-size: clamp(26px, 3.4vw, 36px); color: var(--cream); letter-spacing: -.01em; line-height: 1.1; }
 
-The app won't open
-This is one of the most common issues on any Mac app, and it's almost always fixable in a few steps.
-My Mac says the app is damaged or can't be opened
-This usually happens when a Mac is being extra cautious about an app downloaded from the internet. It does not mean the app is actually damaged.
-	1	Open System Settings.
-	2	Click Privacy & Security in the left sidebar.
-	3	Scroll down. You'll likely see a message saying FetchDish was blocked. Click Open Anyway.
-	4	Your Mac asks you to confirm. Click Open.
-FetchDish should now open normally. You'll only need to do this once.
-A warning says the developer cannot be verified
-This is the same situation as above. Follow the same steps — click Open Anyway in Privacy & Security.
-The app opens but immediately closes
-	1	Restart your Mac and try again.
-	2	Make sure your Mac is running macOS 14 Sonoma or later. To check, click the Apple logo in the top-left corner, then About This Mac.
-If your Mac is too old to run macOS 14, FetchDish isn't compatible with your machine. Apple lists supported Macs at apple.com/macos/sonoma.
+  .content h3 { font-family: var(--ff-serif); font-weight: 600; font-size: 21px; color: var(--cream); margin: 30px 0 12px; }
+  .content p { font-size: 16.5px; color: var(--cream-dim); margin-bottom: 14px; max-width: 64ch; }
+  .content p strong, .content li strong { color: var(--cream); font-weight: 600; }
+  .content a.inline { color: var(--amber-bright); text-decoration: none; border-bottom: 1px solid rgba(221,161,60,.4); }
+  .content a.inline:hover { border-bottom-color: var(--amber-bright); }
+  kbd { font-family: var(--ff-sans); font-size: 13px; font-weight: 600; color: var(--cream); background: var(--bg-3); border: 1px solid var(--hairline); border-bottom-width: 2px; border-radius: 6px; padding: 2px 8px; white-space: nowrap; }
 
-Night Mode
-FetchDish has two looks: the default warm wood theme, and Night Mode, which is darker and easier on the eyes in low light.
-To switch, go to Profile & Settings in the left sidebar and look for the appearance toggle. Set it to whichever you prefer — the app remembers your choice next time you open it.
+  /* numbered steps */
+  ol.steps { list-style: none; counter-reset: step; margin: 18px 0 6px; max-width: 64ch; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 16px 48px; font-size: 16.5px; color: var(--cream-dim); }
+  ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: -1px; width: 30px; height: 30px; border-radius: 50%; background: rgba(200,136,42,.14); border: 1px solid rgba(221,161,60,.35); color: var(--amber-bright); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 14.5px; top: 32px; bottom: 4px; width: 1px; background: var(--hairline); }
 
-Your recipes & your data
-Does FetchDish send my recipes anywhere?
-No. Your recipes are stored on your Mac only. FetchDish does not upload them, does not back them up to a server, and does not share them with anyone — including the developer. What you save stays on your Mac.
-Does FetchDish track me or collect my data?
-No. FetchDish does not track you, collect usage data, or contain analytics or advertising of any kind.
+  ul.bullets { list-style: none; margin: 10px 0 6px; max-width: 64ch; }
+  ul.bullets li { position: relative; padding: 0 0 10px 24px; font-size: 16.5px; color: var(--cream-dim); }
+  ul.bullets li::before { content: ""; position: absolute; left: 4px; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
 
-The only time FetchDish uses your internet connection is when you paste a URL to import a new recipe. It fetches that page, extracts the recipe, saves it locally — and that's the end of it.
+  /* callouts */
+  .callout { border-radius: 14px; padding: 20px 22px 20px 56px; position: relative; margin: 20px 0; max-width: 66ch; font-size: 15.5px; line-height: 1.6; }
+  .callout > svg { position: absolute; left: 20px; top: 20px; width: 22px; height: 22px; }
+  .callout strong { color: var(--cream); }
+  .callout--info { background: rgba(200,136,42,.09); border: 1px solid rgba(221,161,60,.28); color: var(--cream-dim); }
+  .callout--info > svg { color: var(--amber-bright); }
+  .callout--warn { background: rgba(170,80,40,.12); border: 1px solid rgba(200,110,70,.4); color: var(--cream-dim); }
+  .callout--warn > svg { color: #E0915C; }
+  .callout--warn .ttl { display: block; color: #F0B488; font-weight: 700; font-size: 16px; margin-bottom: 4px; letter-spacing: .01em; }
 
-Backing up & moving your recipes
-How to export your recipe library
-If you want a backup, or you want to move your recipes to a new Mac, you can export your whole library as a single file.
-	1	Go to Profile & Settings.
-	2	Click Export Library.
-	3	Choose a location you'll remember, such as your Desktop or Documents folder.
-	4	Click Save.
-That file contains all your saved recipes. Keep it somewhere safe, such as a USB drive or your iCloud Drive folder.
-How to bring your recipes to a new Mac
-	1	Find the export file you saved. If you saved it to iCloud Drive, it's already accessible on your new Mac.
-	2	Open FetchDish on the new Mac.
-	3	Go to Profile & Settings.
-	4	Click Import Library.
-	5	Navigate to the file and click Open. Your recipes appear.
-Your Pro purchase doesn't come with the library file — restore it separately using Restore Purchase as described above.
+  /* pro pricing flag */
+  .pill { display: inline-flex; align-items: center; gap: 7px; background: rgba(200,136,42,.16); border: 1px solid rgba(221,161,60,.4); color: var(--amber-bright); font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 999px; letter-spacing: .02em; }
 
-Export before you delete
-If you delete FetchDish without exporting first, your saved recipes are deleted along with the app. FetchDish doesn't store them anywhere else. Always export your library before deleting the app.
+  /* ===================== CONTACT CARD ===================== */
+  .contact { background: var(--card-solid); border: 1px solid var(--hairline); border-radius: 20px; padding: clamp(32px,4vw,48px); text-align: center; box-shadow: var(--shadow-card); margin-top: 8px; }
+  .contact h2 { margin-bottom: 12px; }
+  .contact p { margin: 0 auto 22px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; font-family: var(--ff-sans); font-size: 16px; font-weight: 600; border: none; cursor: pointer; text-decoration: none; border-radius: 13px; padding: 14px 26px; transition: transform .25s cubic-bezier(.16,.84,.44,1), box-shadow .25s, background .25s; }
+  .btn--amber { background: var(--amber); color: #2A1B07; box-shadow: 0 12px 30px -10px rgba(200,136,42,.7), inset 0 1px 0 rgba(255,255,255,.28); }
+  .btn--amber:hover { background: var(--amber-bright); transform: translateY(-2px); }
+  .btn svg { width: 18px; height: 18px; }
 
-System requirements
-FetchDish requires macOS 14 Sonoma or later. It runs on both Apple Silicon Macs (M1, M2, M3, M4) and Intel Macs.
-To check your macOS version: click the Apple logo in the top-left corner of your screen, then click About This Mac.
-iOS version
-FetchDish for iPhone and iPad is in development. It will support the same core features. When it's available it will appear on the App Store, and this page will be updated.
+  /* ===================== FOOTER ===================== */
+  footer { background: var(--brown-ink); padding: 56px 32px 48px; border-top: 1px solid var(--hairline); position: relative; z-index: 2; }
+  .footer__inner { max-width: var(--maxw); margin: 0 auto; }
+  .footer__top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 22px; }
+  .footer__logo { font-family: var(--ff-serif); font-weight: 700; font-size: 24px; color: var(--cream); text-decoration: none; }
+  .footer__links { display: flex; gap: 28px; }
+  .footer__links a { color: var(--cream-dim); text-decoration: none; font-size: 15px; transition: color .2s; }
+  .footer__links a:hover { color: var(--amber-bright); }
+  .footer__legal { margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--hairline); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .footer__legal p { font-size: 13px; color: var(--cream-faint); }
 
-Disclaimer & important safety information
-Please read this section carefully before using FetchDish.
-About recipe content
-FetchDish retrieves recipe content from web addresses you provide and copies what the source website published at the time of import. It does not write, edit, verify, test, or take responsibility for any recipe content from any third-party website.
-Recipe websites change their content at any time. A recipe you saved today may differ from what the website shows tomorrow. The version in your library is a snapshot from the moment you imported it. FetchDish is not responsible for errors, omissions, incomplete extraction, incorrect quantities, cooking times, temperatures, or any other inaccuracies. Always cross-reference a recipe with its original source before cooking.
-About edited recipes
-FetchDish lets you create your own edited version of any saved recipe. When you do, both the original imported version and your edited version are stored side by side. FetchDish does not review, validate, or verify user-edited content. You are solely responsible for the accuracy and safety of any changes you make.
-About allergen warnings
-FetchDish displays warning badges on recipe cards when ingredients match allergens you've listed in your profile settings. This is a personal convenience tool only.
+  /* back to top */
+  .totop { position: fixed; right: 26px; bottom: 26px; z-index: 90; width: 46px; height: 46px; border-radius: 50%; background: var(--card-solid); border: 1px solid var(--hairline); color: var(--cream); display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .3s, transform .3s, background .2s; box-shadow: var(--shadow-card); }
+  .totop.show { opacity: 1; transform: none; pointer-events: auto; }
+  .totop:hover { background: var(--amber); color: #2A1B07; }
+  .totop svg { width: 20px; height: 20px; }
 
-This is not a medical safety system
-FetchDish reads ingredient text as published. It cannot detect allergens not explicitly listed, allergens under a different name, cross-contamination, trace amounts, facility warnings, or hidden allergens in compound ingredients. A warning badge does not mean a recipe is safe for anyone with that allergy, and the absence of a badge does not mean a recipe is free of that allergen. If you or anyone you're cooking for has a food allergy, do not rely on FetchDish allergen warnings — read every ingredient in full, consult the original source, and when in doubt consult a medical professional or registered dietitian.
-About dietary preferences
-Dietary preference settings filter results in What Can I Cook. They are a personal organizational tool only. FetchDish does not certify that any recipe meets any dietary standard, religious requirement, medical guideline, or nutritional specification. Don't use dietary filtering as a substitute for reading a recipe in full.
-About What Can I Cook
-What Can I Cook searches your saved library for recipes whose ingredient lists match ingredients you enter. It matches based on the presence of ingredients as written. It does not know how much of an ingredient you have, whether an ingredient has expired, whether a substitution is safe, or whether a recipe suits your health or dietary needs. Results are suggestions only. You are responsible for all decisions made in your kitchen.
-About user data & privacy
-FetchDish does not collect, transmit, sell, or share any personal data, recipe data, profile data, or usage data. Everything you enter stays on your device. The developer has no access to your data at any time. The only outbound network request FetchDish makes is fetching the URL of a recipe page you explicitly provide.
-General limitation of liability
-FetchDish is provided "as is" and "as available," without warranties of any kind, express or implied, including warranties of accuracy, fitness for a particular purpose, or suitability for any specific use. To the fullest extent permitted by law, Ferenc Paczka shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from your use of FetchDish or any content accessed through it, including allergic reactions, illness, injury, property damage, or any other harm resulting from cooking or food preparation.
-Your use of FetchDish is entirely at your own risk. FetchDish is a personal organizational tool. It is not a medical device, a dietary counseling service, an allergy management system, or a substitute for professional nutritional or medical advice.
-FetchDish is available exclusively through the Mac App Store. It is not affiliated with, endorsed by, or connected to Apple Inc. in any way.
-Still stuck?
-Almost everything is covered above — scroll back through the steps for your situation. The one thing handled outside the app is billing: all payments, receipts, and refunds go through Apple, not the developer.
-View on the Mac App Store
-FetchDish
-Home
-Mac App Store
-Billing & refunds
-© 2026 Ferenc Paczka. All rights reserved. — fetchdish.com
-FetchDish is an independent app. Not affiliated with Apple Inc.
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; gap: 36px; }
+    .toc { position: static; border: 1px solid var(--hairline); border-radius: 16px; padding: 20px 14px; background: var(--bg-2); }
+    .toc ul { columns: 2; column-gap: 16px; }
+    .toc a { border-left: none; border-radius: 8px; }
+    .toc a.active { border-left: none; }
+  }
+  @media (max-width: 560px) {
+    .topnav { padding: 0 20px; }
+    .topnav__brand span { display: none; }
+    .toc ul { columns: 1; }
+    .shell { padding-left: 20px; padding-right: 20px; }
+  }
+</style>
+</head>
+<body>
 
+  <!-- ============ TOP NAV ============ -->
+  <nav class="topnav">
+    <a class="topnav__brand" href="index.html">
+      <img src="assets/logo.png" alt="" />
+      <b>FetchDish</b><span>&nbsp;Support</span>
+    </a>
+    <a class="topnav__back" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to home
+    </a>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <header class="s-hero" data-screen-label="Support hero">
+    <div class="s-hero__bg"></div>
+    <div class="s-hero__scrim"></div>
+    <p class="s-hero__eyebrow">Help Center</p>
+    <h1>How can we help?</h1>
+    <p>If something isn't working the way you expected, this page walks you through it step by step. No technical knowledge needed — just find the section that matches your situation.</p>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <div class="shell">
+
+    <!-- ---- TOC ---- -->
+    <aside class="toc" aria-label="Table of contents">
+      <p class="toc__label">On this page</p>
+      <ul>
+        <li><a href="#getting-started">Getting started</a></li>
+        <li><a href="#free-pro">Free version &amp; Pro</a></li>
+        <li><a href="#recipe-import">Recipe import</a></li>
+        <li><a href="#share-safari">Save from Safari</a></li>
+        <li><a href="#shopping-list">Shopping List</a></li>
+        <li><a href="#what-can-i-cook">What Can I Cook</a></li>
+        <li><a href="#wont-open">App won't open</a></li>
+        <li><a href="#night-mode">Night Mode</a></li>
+        <li><a href="#privacy">Your data &amp; privacy</a></li>
+        <li><a href="#backup">Backup &amp; moving Macs</a></li>
+        <li><a href="#requirements">System requirements</a></li>
+        <li><a href="#disclaimer">Disclaimer &amp; safety</a></li>
+      </ul>
+    </aside>
+
+    <!-- ---- CONTENT ---- -->
+    <main class="content">
+
+      <!-- intro -->
+      <section id="about" data-screen-label="What is FetchDish">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <h2>What is FetchDish?</h2>
+        </div>
+        <p>FetchDish is a recipe-saving app for Mac. You find a recipe you like on any cooking website, copy the link, and paste it into FetchDish. The app saves just the recipe: the title, the ingredients, and the steps. No ads. No long stories about someone's grandmother's kitchen. Just the recipe.</p>
+        <p>Your recipes live on your Mac. <strong>FetchDish does not create an account for you, does not store your recipes on the internet, and does not share anything with anyone.</strong></p>
+      </section>
+
+      <!-- getting started -->
+      <section id="getting-started" data-screen-label="Getting started">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>
+          </span>
+          <h2>Getting started</h2>
+        </div>
+        <h3>Saving your first recipe</h3>
+        <ol class="steps">
+          <li>Find a recipe you like on any cooking website — AllRecipes, Food Network, BBC Good Food, Epicurious, or anywhere else.</li>
+          <li>Copy the web address from the top of your browser (it starts with <strong>https://</strong>). Click once on the address bar to highlight it, then press <kbd>⌘ Command</kbd> + <kbd>C</kbd>.</li>
+          <li>Open FetchDish.</li>
+          <li>Click <strong>Add Recipe</strong> in the left sidebar.</li>
+          <li>Click inside the box that appears and press <kbd>⌘ Command</kbd> + <kbd>V</kbd> to paste the address.</li>
+          <li>FetchDish fetches the recipe. In a few seconds it appears in your library.</li>
+        </ol>
+        <p>That's it — your recipe is saved.</p>
+        <div class="callout callout--info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>
+          The free version saves up to <strong>5 recipes</strong>. To save more, upgrade to <strong>Pro</strong> for a one-time payment of $19.99 — no monthly fees, ever.
+        </div>
+      </section>
+
+      <!-- free & pro -->
+      <section id="free-pro" data-screen-label="Free and Pro">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.6 6.6L21 9.3l-5 4.5 1.4 6.7L12 17l-5.4 3.5L8 13.8l-5-4.5 6.4-.7z"/></svg>
+          </span>
+          <h2>Free version &amp; Pro</h2>
+        </div>
+        <h3>What you get for free</h3>
+        <p>When you download FetchDish you get the full app with every feature included. The only limit is that you can save up to <strong>5 recipes</strong>. You can use Shopping List and What Can I Cook from day one.</p>
+        <h3>What happens when you reach 5 recipes</h3>
+        <p>FetchDish lets you know you've reached the free limit and offers the option to upgrade to Pro. Your existing 5 recipes stay safe — nothing is deleted. You simply can't add more until you upgrade, or delete a saved recipe to make room.</p>
+        <h3>What Pro gives you <span class="pill">$19.99 once</span></h3>
+        <p>Pro removes the 5-recipe limit and unlocks <strong>unlimited recipe storage</strong>, <strong>auto-scroll cooking mode</strong>, and all future premium features. You pay once and that's it. <strong>No subscription. No renewal. No surprises on your credit card.</strong></p>
+        <h3>How to upgrade to Pro</h3>
+        <ol class="steps">
+          <li>Open FetchDish.</li>
+          <li>Go to <strong>Profile &amp; Settings</strong> in the left sidebar.</li>
+          <li>Click <strong>Upgrade to Pro</strong>.</li>
+          <li>Follow the App Store prompts. Apple handles the payment using your Apple ID — the same account you use for any other App Store purchase.</li>
+        </ol>
+        <h3>Getting Pro back after reinstalling or switching Macs</h3>
+        <p>Your Pro purchase is tied to your Apple ID, not to your Mac. You can always get it back at no extra cost.</p>
+        <ol class="steps">
+          <li>Open FetchDish on your new or reinstalled Mac.</li>
+          <li>Go to <strong>Profile &amp; Settings</strong>.</li>
+          <li>Click <strong>Restore Purchase</strong>.</li>
+          <li>Make sure you're signed into the same Apple ID you used when you first bought Pro.</li>
+        </ol>
+        <p>Not sure which Apple ID you used? Open <strong>System Settings</strong>, click your name at the very top of the left sidebar, and confirm which account is signed in.</p>
+        <div class="callout callout--info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
+          <strong>Billing &amp; refunds:</strong> FetchDish uses Apple's App Store for all payments. The developer can't process refunds directly. For any billing issue or refund, visit <a class="inline" href="https://reportaproblem.apple.com" target="_blank" rel="noopener">reportaproblem.apple.com</a> and sign in with your Apple ID.
+        </div>
+      </section>
+
+      <!-- recipe import -->
+      <section id="recipe-import" data-screen-label="Recipe import">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6"/><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/></svg>
+          </span>
+          <h2>Recipe import</h2>
+        </div>
+        <h3>A recipe saved, but some ingredients or steps are missing</h3>
+        <p>FetchDish reads the recipe data that cooking websites publish. Most major sites work perfectly. A small number format their recipes in unusual ways that make complete extraction difficult.</p>
+        <p>If your recipe came in incomplete, the simplest fix is to search for the same recipe on a different website and import that version instead. The recipe is the same — the source is just more readable.</p>
+        <h3>A recipe didn't save at all</h3>
+        <p>Work through these in order:</p>
+        <ol class="steps">
+          <li><strong>Check your internet connection.</strong> FetchDish needs internet to fetch a recipe the first time. After that it's saved on your Mac and you don't need internet to view it.</li>
+          <li>Make sure the address you pasted is a <strong>direct link to the recipe page itself</strong> — not a search result or a website homepage.</li>
+          <li>Open the same link in Safari and confirm the page loads. If it asks you to log in or subscribe to see the recipe, FetchDish can't access it either — no app can read content behind a login wall.</li>
+          <li>If the page loads fine in Safari but still won't import, that website is likely blocking automated requests. That's the website's decision, not a FetchDish problem. Search for the same recipe on a site like AllRecipes or BBC Good Food and import from there.</li>
+        </ol>
+      </section>
+
+      <!-- share from safari -->
+      <section id="share-safari" data-screen-label="Save from Safari">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+          </span>
+          <h2>Save a recipe directly from Safari</h2>
+        </div>
+        <p>FetchDish includes a Share Extension, so you can send a recipe to FetchDish directly from Safari without copying and pasting the address manually.</p>
+        <h3>How to use it</h3>
+        <ol class="steps">
+          <li>Find a recipe in Safari.</li>
+          <li>Click the <strong>Share</strong> button in the Safari toolbar — it looks like a box with an arrow pointing upward.</li>
+          <li>Look for <strong>FetchDish</strong> in the list of options that appears.</li>
+          <li>Click <strong>FetchDish</strong>. The recipe is sent to your library automatically.</li>
+        </ol>
+        <h3>FetchDish doesn't appear in my Share menu</h3>
+        <ol class="steps">
+          <li>Click the <strong>Share</strong> button in Safari.</li>
+          <li>Scroll to the bottom of the list and click <strong>More</strong>.</li>
+          <li>Find <strong>FetchDish</strong> in the list and turn it on.</li>
+          <li>Close the window. FetchDish now appears in your Share menu every time.</li>
+        </ol>
+      </section>
+
+      <!-- shopping list -->
+      <section id="shopping-list" data-screen-label="Shopping List">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/><path d="M9.5 12l1.5 1.5 3.5-3.5"/></svg>
+          </span>
+          <h2>Shopping List</h2>
+        </div>
+        <p>When you open any saved recipe, you can add its ingredients to your Shopping List with one tap. You can do this for multiple recipes at once — the list gathers everything together so you can take it to the store.</p>
+        <p>You manage the list yourself. When you've bought something, you check it off or remove it. <strong>FetchDish does not clear the list automatically.</strong></p>
+        <h3>An ingredient looks strange or is formatted oddly</h3>
+        <p>This reflects exactly how the recipe website wrote it — FetchDish copies the ingredient as published. You can edit any item directly in the Shopping List by clicking on it.</p>
+      </section>
+
+      <!-- what can i cook -->
+      <section id="what-can-i-cook" data-screen-label="What Can I Cook">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M16 13l4-2"/><path d="M7 16l-1 3"/><path d="M12 16l1 3"/></svg>
+          </span>
+          <h2>What Can I Cook</h2>
+        </div>
+        <p>Open What Can I Cook and type in the ingredients you have at home. FetchDish looks through your saved recipes and shows which ones you can make with those ingredients.</p>
+        <div class="callout callout--info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>
+          <strong>What Can I Cook only searches recipes you've already saved</strong> — it does not search the internet. If you have 4 saved recipes and enter 10 ingredients, you'll only ever see results from those 4. The more recipes you save, the more useful it becomes.
+        </div>
+        <h3>No results are showing</h3>
+        <p>This means none of your saved recipes match the ingredients you typed. Try entering fewer ingredients to broaden the search, and consider saving more recipes to give the feature more to work with.</p>
+        <div class="callout callout--warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+          <span class="ttl">Suggestions only</span>
+          What Can I Cook doesn't know about food allergies, dietary needs, how much of an ingredient you have, or whether something in your fridge has gone bad. Always read a recipe fully before you start cooking.
+        </div>
+      </section>
+
+      <!-- won't open -->
+      <section id="wont-open" data-screen-label="App won't open">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="13" rx="1.5"/><path d="M2 20h20"/><path d="M9 8.5l3 3 3-3"/></svg>
+          </span>
+          <h2>The app won't open</h2>
+        </div>
+        <p>This is one of the most common issues on any Mac app, and it's almost always fixable in a few steps.</p>
+        <h3>My Mac says the app is damaged or can't be opened</h3>
+        <p>This usually happens when a Mac is being extra cautious about an app downloaded from the internet. It does <strong>not</strong> mean the app is actually damaged.</p>
+        <ol class="steps">
+          <li>Open <strong>System Settings</strong>.</li>
+          <li>Click <strong>Privacy &amp; Security</strong> in the left sidebar.</li>
+          <li>Scroll down. You'll likely see a message saying FetchDish was blocked. Click <strong>Open Anyway</strong>.</li>
+          <li>Your Mac asks you to confirm. Click <strong>Open</strong>.</li>
+        </ol>
+        <p>FetchDish should now open normally. You'll only need to do this once.</p>
+        <h3>A warning says the developer cannot be verified</h3>
+        <p>This is the same situation as above. Follow the same steps — click <strong>Open Anyway</strong> in Privacy &amp; Security.</p>
+        <h3>The app opens but immediately closes</h3>
+        <ol class="steps">
+          <li>Restart your Mac and try again.</li>
+          <li>Make sure your Mac is running <strong>macOS 14 Sonoma or later</strong>. To check, click the Apple logo in the top-left corner, then <strong>About This Mac</strong>.</li>
+        </ol>
+        <p>If your Mac is too old to run macOS 14, FetchDish isn't compatible with your machine. Apple lists supported Macs at <a class="inline" href="https://www.apple.com/macos/sonoma" target="_blank" rel="noopener">apple.com/macos/sonoma</a>.</p>
+      </section>
+
+      <!-- night mode -->
+      <section id="night-mode" data-screen-label="Night Mode">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 10 4a6.3 6.3 0 0 0 10 10.5z"/></svg>
+          </span>
+          <h2>Night Mode</h2>
+        </div>
+        <p>FetchDish has two looks: the default warm wood theme, and <strong>Night Mode</strong>, which is darker and easier on the eyes in low light.</p>
+        <p>To switch, go to <strong>Profile &amp; Settings</strong> in the left sidebar and look for the appearance toggle. Set it to whichever you prefer — the app remembers your choice next time you open it.</p>
+      </section>
+
+      <!-- privacy -->
+      <section id="privacy" data-screen-label="Your data and privacy">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6z"/><path d="M9.5 12l1.8 1.8 3.5-3.6"/></svg>
+          </span>
+          <h2>Your recipes &amp; your data</h2>
+        </div>
+        <h3>Does FetchDish send my recipes anywhere?</h3>
+        <p><strong>No.</strong> Your recipes are stored on your Mac only. FetchDish does not upload them, does not back them up to a server, and does not share them with anyone — including the developer. What you save stays on your Mac.</p>
+        <h3>Does FetchDish track me or collect my data?</h3>
+        <p><strong>No.</strong> FetchDish does not track you, collect usage data, or contain analytics or advertising of any kind.</p>
+        <div class="callout callout--info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6z"/></svg>
+          The only time FetchDish uses your internet connection is when you paste a URL to import a new recipe. It fetches that page, extracts the recipe, saves it locally — and that's the end of it.
+        </div>
+      </section>
+
+      <!-- backup -->
+      <section id="backup" data-screen-label="Backup and moving Macs">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7a2 2 0 0 1 2-2h5l2 2h5a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M12 10v6"/><path d="M9.5 12.5L12 10l2.5 2.5"/></svg>
+          </span>
+          <h2>Backing up &amp; moving your recipes</h2>
+        </div>
+        <h3>How to export your recipe library</h3>
+        <p>If you want a backup, or you want to move your recipes to a new Mac, you can export your whole library as a single file.</p>
+        <ol class="steps">
+          <li>Go to <strong>Profile &amp; Settings</strong>.</li>
+          <li>Click <strong>Export Library</strong>.</li>
+          <li>Choose a location you'll remember, such as your Desktop or Documents folder.</li>
+          <li>Click <strong>Save</strong>.</li>
+        </ol>
+        <p>That file contains all your saved recipes. Keep it somewhere safe, such as a USB drive or your iCloud Drive folder.</p>
+        <h3>How to bring your recipes to a new Mac</h3>
+        <ol class="steps">
+          <li>Find the export file you saved. If you saved it to iCloud Drive, it's already accessible on your new Mac.</li>
+          <li>Open FetchDish on the new Mac.</li>
+          <li>Go to <strong>Profile &amp; Settings</strong>.</li>
+          <li>Click <strong>Import Library</strong>.</li>
+          <li>Navigate to the file and click <strong>Open</strong>. Your recipes appear.</li>
+        </ol>
+        <p>Your Pro purchase doesn't come with the library file — restore it separately using <strong>Restore Purchase</strong> as described above.</p>
+        <div class="callout callout--warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+          <span class="ttl">Export before you delete</span>
+          If you delete FetchDish without exporting first, your saved recipes are deleted along with the app. FetchDish doesn't store them anywhere else. Always export your library before deleting the app.
+        </div>
+      </section>
+
+      <!-- requirements -->
+      <section id="requirements" data-screen-label="System requirements">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 20h20"/><path d="M9.5 16l-.6 2"/><path d="M14.5 16l.6 2"/></svg>
+          </span>
+          <h2>System requirements</h2>
+        </div>
+        <p>FetchDish requires <strong>macOS 14 Sonoma or later</strong>. It runs on both Apple Silicon Macs (M1, M2, M3, M4) and Intel Macs.</p>
+        <p>To check your macOS version: click the Apple logo in the top-left corner of your screen, then click <strong>About This Mac</strong>.</p>
+        <h3>iOS version</h3>
+        <p>FetchDish for iPhone and iPad is in development. It will support the same core features. When it's available it will appear on the App Store, and this page will be updated.</p>
+      </section>
+
+      <!-- disclaimer -->
+      <section id="disclaimer" data-screen-label="Disclaimer and safety">
+        <div class="sec-head">
+          <span class="sec-head__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 9v4"/><circle cx="12" cy="16.5" r="1" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <h2>Disclaimer &amp; important safety information</h2>
+        </div>
+        <p>Please read this section carefully before using FetchDish.</p>
+
+        <h3>About recipe content</h3>
+        <p>FetchDish retrieves recipe content from web addresses you provide and copies what the source website published at the time of import. It does not write, edit, verify, test, or take responsibility for any recipe content from any third-party website.</p>
+        <p>Recipe websites change their content at any time. A recipe you saved today may differ from what the website shows tomorrow. The version in your library is a snapshot from the moment you imported it. FetchDish is not responsible for errors, omissions, incomplete extraction, incorrect quantities, cooking times, temperatures, or any other inaccuracies. Always cross-reference a recipe with its original source before cooking.</p>
+
+        <h3>About edited recipes</h3>
+        <p>FetchDish lets you create your own edited version of any saved recipe. When you do, both the original imported version and your edited version are stored side by side. FetchDish does not review, validate, or verify user-edited content. You are solely responsible for the accuracy and safety of any changes you make.</p>
+
+        <h3>About allergen warnings</h3>
+        <p>FetchDish displays warning badges on recipe cards when ingredients match allergens you've listed in your profile settings. This is a personal convenience tool only.</p>
+        <div class="callout callout--warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
+          <span class="ttl">This is not a medical safety system</span>
+          FetchDish reads ingredient text as published. It cannot detect allergens not explicitly listed, allergens under a different name, cross-contamination, trace amounts, facility warnings, or hidden allergens in compound ingredients. A warning badge does <strong>not</strong> mean a recipe is safe for anyone with that allergy, and the absence of a badge does <strong>not</strong> mean a recipe is free of that allergen. If you or anyone you're cooking for has a food allergy, do not rely on FetchDish allergen warnings — read every ingredient in full, consult the original source, and when in doubt consult a medical professional or registered dietitian.
+        </div>
+
+        <h3>About dietary preferences</h3>
+        <p>Dietary preference settings filter results in What Can I Cook. They are a personal organizational tool only. FetchDish does not certify that any recipe meets any dietary standard, religious requirement, medical guideline, or nutritional specification. Don't use dietary filtering as a substitute for reading a recipe in full.</p>
+
+        <h3>About What Can I Cook</h3>
+        <p>What Can I Cook searches your saved library for recipes whose ingredient lists match ingredients you enter. It matches based on the presence of ingredients as written. It does not know how much of an ingredient you have, whether an ingredient has expired, whether a substitution is safe, or whether a recipe suits your health or dietary needs. Results are suggestions only. You are responsible for all decisions made in your kitchen.</p>
+
+        <h3>About user data &amp; privacy</h3>
+        <p>FetchDish does not collect, transmit, sell, or share any personal data, recipe data, profile data, or usage data. Everything you enter stays on your device. The developer has no access to your data at any time. The only outbound network request FetchDish makes is fetching the URL of a recipe page you explicitly provide.</p>
+
+        <h3>General limitation of liability</h3>
+        <p>FetchDish is provided "as is" and "as available," without warranties of any kind, express or implied, including warranties of accuracy, fitness for a particular purpose, or suitability for any specific use. To the fullest extent permitted by law, Ferenc Paczka shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from your use of FetchDish or any content accessed through it, including allergic reactions, illness, injury, property damage, or any other harm resulting from cooking or food preparation.</p>
+        <p>Your use of FetchDish is entirely at your own risk. FetchDish is a personal organizational tool. It is not a medical device, a dietary counseling service, an allergy management system, or a substitute for professional nutritional or medical advice.</p>
+        <p>FetchDish is available exclusively through the Mac App Store. It is not affiliated with, endorsed by, or connected to Apple Inc. in any way.</p>
+      </section>
+
+      <!-- contact -->
+      <section id="contact" style="border-bottom:none;" data-screen-label="Still need help">
+        <div class="contact">
+          <h2>Still stuck?</h2>
+          <p>Almost everything is covered above — scroll back through the steps for your situation. The one thing handled outside the app is billing: all payments, receipts, and refunds go through Apple, not the developer.</p>
+          <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+            <a class="btn btn--amber" href="https://apps.apple.com/us/app/fetchdish/id6762249108?mt=12" target="_blank" rel="noopener">
+              View on the Mac App Store
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <footer data-screen-label="Footer">
+    <div class="footer__inner">
+      <div class="footer__top">
+        <a class="footer__logo" href="index.html">FetchDish</a>
+        <nav class="footer__links">
+          <a href="index.html">Home</a>
+          <a href="https://apps.apple.com/us/app/fetchdish/id6762249108?mt=12" target="_blank" rel="noopener">Mac App Store</a>
+          <a href="https://reportaproblem.apple.com" target="_blank" rel="noopener">Billing &amp; refunds</a>
+        </nav>
+      </div>
+      <div class="footer__legal">
+        <p>© 2026 Ferenc Paczka. All rights reserved. — fetchdish.com</p>
+        <p>FetchDish is an independent app. Not affiliated with Apple Inc.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- back to top -->
+  <button class="totop" id="toTop" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
+  </button>
+
+  <script>
+    // ---- radiating pulse cursor ----
+    if (matchMedia('(hover: hover)').matches) {
+      const fx = document.createElement('div');
+      fx.className = 'cursor-fx';
+      fx.innerHTML = '<span class="ring"></span><span class="dot"></span>';
+      document.body.appendChild(fx);
+      let x = innerWidth/2, y = innerHeight/2, raf = false;
+      addEventListener('mousemove', (e) => {
+        x = e.clientX; y = e.clientY;
+        document.body.classList.remove('cursor-hide');
+        if (!raf) { raf = true; requestAnimationFrame(() => { fx.style.transform = `translate(${x}px, ${y}px)`; raf = false; }); }
+      }, { passive: true });
+      const hoverSel = 'a, button, .btn, [role="button"], kbd';
+      addEventListener('mouseover', (e) => { if (e.target.closest(hoverSel)) fx.classList.add('is-hover'); });
+      addEventListener('mouseout', (e) => { if (e.target.closest(hoverSel)) fx.classList.remove('is-hover'); });
+      document.addEventListener('mouseleave', () => document.body.classList.add('cursor-hide'));
+      document.addEventListener('mouseenter', () => document.body.classList.remove('cursor-hide'));
+    }
+
+    // ---- TOC active-section highlight ----
+    const links = [...document.querySelectorAll('.toc a')];
+    const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+    const sections = [...document.querySelectorAll('.content > section[id]')].filter(s => map.has(s.id));
+    const spy = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          links.forEach(l => l.classList.remove('active'));
+          const a = map.get(e.target.id);
+          if (a) a.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+    sections.forEach(s => spy.observe(s));
+
+    // ---- back to top ----
+    const toTop = document.getElementById('toTop');
+    addEventListener('scroll', () => { toTop.classList.toggle('show', scrollY > 600); }, { passive: true });
+    toTop.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
+  </script>
+
+  <template id="__bundler_thumbnail">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#3D2B1A"/>
+      <text x="50" y="48" font-family="Georgia, serif" font-size="30" font-weight="bold" fill="#F5ECD7" text-anchor="middle">F</text>
+      <text x="50" y="72" font-family="Georgia, serif" font-size="13" fill="#DDA13C" text-anchor="middle">Support</text>
+    </svg>
+  </template>
+</body>
+</html>
+ferenc@FERENCs-Mac-mini ~ % 
