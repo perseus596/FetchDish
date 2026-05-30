@@ -1,76 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FetchDish — Just recipes.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Warm palette pulled from the app UI */
+    --brown:        #3D2B1A;
+    --brown-deep:   #2A1D11;
+    --brown-ink:    #1B120A;
+    --amber:        #C8882A;
+    --amber-bright: #DDA13C;
+    --amber-deep:   #A86E1E;
+    --cream:        #F5ECD7;
+    --cream-dim:    #D9CDB4;
+    --cream-faint:  #A89A80;
+
+    /* Surfaces */
+    --bg:           #1B120A;
+    --bg-2:         #241810;
+    --bg-3:         #2E2013;
+    --card:         #33241596;
+    --card-solid:   #3A2A18;
+    --hairline:     #4A361F;
+
+    --shadow-soft:  0 18px 50px -20px rgba(0,0,0,.65);
+    --shadow-card:  0 24px 60px -28px rgba(0,0,0,.75);
+
+    --ff-serif: "Spectral", Georgia, "Times New Roman", serif;
+    --ff-sans:  -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+
+    --maxw: 1180px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: var(--ff-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    line-height: 1.55;
+    overflow-x: hidden;
+    cursor: none;
+  }
+  /* Custom radiating pulse pointer */
+  .cursor-fx { position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none; will-change: transform; }
+  .cursor-fx .dot, .cursor-fx .ring { position: absolute; top: 0; left: 0; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; }
+  .cursor-fx .dot { background: var(--amber-bright); box-shadow: 0 0 0 1.5px rgba(18,12,6,.6), 0 0 12px rgba(221,161,60,.65); transition: transform .16s ease-out, background .16s; }
+  .cursor-fx .ring { border: 2px solid var(--amber-bright); opacity: 0; animation: cursorPulse 1.8s ease-out infinite; }
+  @keyframes cursorPulse { 0% { transform: scale(.7); opacity: .6; } 80% { opacity: 0; } 100% { transform: scale(3.6); opacity: 0; } }
+  .cursor-fx.is-hover .dot { transform: scale(1.7); background: #fff; }
+  body.cursor-hide .cursor-fx { opacity: 0; }
+  @media (hover: none) { body { cursor: auto; } .cursor-fx { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .cursor-fx .ring { animation: none; } }
+
+  /* Subtle paper-grain noise over the whole page for warmth */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: .035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection { background: var(--amber); color: var(--brown-ink); }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 32px; position: relative; z-index: 2; }
+
+  .serif { font-family: var(--ff-serif); }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .9s cubic-bezier(.16,.84,.44,1), transform .9s cubic-bezier(.16,.84,.44,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .reveal.d1 { transition-delay: .08s; }
+  .reveal.d2 { transition-delay: .16s; }
+  .reveal.d3 { transition-delay: .24s; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ===================================================================
+     SECTION 1 — HERO
+     =================================================================== */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+  }
+  .hero__bg {
+    position: absolute; inset: 0;
+    background: url("assets/hero.png") center 38% / cover no-repeat;
+    transform: scale(1.06);
+    will-change: transform;
+  }
+  /* Soft dark overlay — heavier through the center to mask the photo's
+     baked-in text and keep the crisp white wordmark legible. */
+  .hero__scrim {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(26% 18% at 50% 54%, rgba(18,12,6,.96) 0%, rgba(18,12,6,.8) 58%, rgba(18,12,6,0) 100%),
+      radial-gradient(64% 60% at 50% 53%, rgba(20,13,7,.72) 0%, rgba(20,13,7,.58) 32%, rgba(20,13,7,.32) 62%, rgba(20,13,7,.1) 84%),
+      linear-gradient(180deg, rgba(20,13,7,.42) 0%, rgba(20,13,7,.1) 30%, rgba(20,13,7,.26) 70%, rgba(20,13,7,.92) 100%);
+  }
+  .hero__content { position: relative; z-index: 3; padding: 40px 24px; max-width: 720px; }
+  .hero__logo {
+    font-family: var(--ff-serif);
+    font-weight: 800;
+    color: #fff;
+    font-size: clamp(56px, 9vw, 112px);
+    line-height: .98;
+    letter-spacing: -.015em;
+    text-shadow: 0 4px 40px rgba(0,0,0,.5);
+  }
+  .hero__tagline {
+    margin-top: 18px;
+    font-size: clamp(18px, 2.4vw, 24px);
+    font-weight: 500;
+    color: rgba(255,255,255,.92);
+    letter-spacing: .01em;
+    text-shadow: 0 2px 18px rgba(0,0,0,.6);
+  }
+  .hero__cta { margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 11px;
+    font-family: var(--ff-sans);
+    font-size: 17px; font-weight: 600;
+    border: none; cursor: pointer;
+    text-decoration: none;
+    border-radius: 14px;
+    padding: 16px 30px;
+    transition: transform .25s cubic-bezier(.16,.84,.44,1), box-shadow .25s, background .25s;
+  }
+  .btn--amber {
+    background: var(--amber);
+    color: #2A1B07;
+    box-shadow: 0 12px 30px -10px rgba(200,136,42,.7), inset 0 1px 0 rgba(255,255,255,.28);
+  }
+  .btn--amber:hover { background: var(--amber-bright); transform: translateY(-2px); box-shadow: 0 18px 38px -10px rgba(200,136,42,.8), inset 0 1px 0 rgba(255,255,255,.32); }
+  .btn--amber:active { transform: translateY(0); }
+  .btn svg { width: 19px; height: 19px; }
+
+  .ios-note {
+    font-size: 13.5px;
+    color: rgba(255,255,255,.7);
+    letter-spacing: .04em;
+    text-shadow: 0 1px 10px rgba(0,0,0,.5);
+  }
+
+  .hero__scrolltip {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 3;
+    color: rgba(255,255,255,.55);
+    font-size: 11px; letter-spacing: .28em; text-transform: uppercase;
+    display: flex; flex-direction: column; align-items: center; gap: 9px;
+  }
+  .hero__scrolltip span { width: 1px; height: 34px; background: linear-gradient(rgba(255,255,255,.5), transparent); animation: scrolldrop 2.2s ease-in-out infinite; }
+  @keyframes scrolldrop { 0%,100%{ opacity:.3; transform: scaleY(.6); transform-origin: top; } 50%{ opacity:1; transform: scaleY(1);} }
+
+  /* ===================================================================
+     SECTION 2 — PROBLEM
+     =================================================================== */
+  section { position: relative; z-index: 2; }
+
+  .problem { background: var(--bg-2); padding: clamp(96px, 13vh, 168px) 0; }
+  .problem .wrap { max-width: 920px; }
+  .problem h2 {
+    font-family: var(--ff-serif);
+    font-weight: 700;
+    font-size: clamp(30px, 4.6vw, 56px);
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    color: var(--cream);
+    text-wrap: balance;
+  }
+  .problem h2 .em { color: var(--amber-bright); font-style: italic; }
+  .problem p {
+    margin-top: 30px;
+    max-width: 640px;
+    font-size: clamp(17px, 1.7vw, 20px);
+    color: var(--cream-dim);
+    line-height: 1.7;
+  }
+  .problem p strong { color: var(--cream); font-weight: 600; }
+
+  /* ===================================================================
+     SECTION 3 — FEATURE TILES
+     =================================================================== */
+  .features { background: var(--bg); padding: clamp(80px, 10vh, 130px) 0; }
+  .eyebrow {
+    font-size: 12.5px; font-weight: 600;
+    letter-spacing: .26em; text-transform: uppercase;
+    color: var(--amber-bright);
+    margin-bottom: 18px;
+  }
+  .features__intro { text-align: center; max-width: 660px; margin: 0 auto; }
+  .features__intro h2 {
+    font-family: var(--ff-serif); font-weight: 700;
+    font-size: clamp(30px, 4.4vw, 52px);
+    letter-spacing: -.01em; color: var(--cream); margin-top: 6px;
+  }
+  .features__intro p { margin-top: 16px; font-size: clamp(16px,1.7vw,19px); color: var(--cream-dim); line-height: 1.6; }
+
+  .feature-rows { display: flex; flex-direction: column; gap: clamp(48px, 7vh, 84px); margin-top: clamp(52px, 7vh, 84px); }
+  .frow { display: grid; grid-template-columns: minmax(0, 360px) 1fr; gap: clamp(36px, 5vw, 76px); align-items: center; }
+  .fnum {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase;
+    color: var(--amber-bright); margin-bottom: 18px;
+    display: flex; align-items: center; gap: 13px;
+  }
+  .fnum::before { content: ""; width: 30px; height: 1px; background: var(--amber-deep); }
+  .frow__text h3 {
+    font-family: var(--ff-serif); font-weight: 700;
+    font-size: clamp(26px, 3.2vw, 38px); line-height: 1.12;
+    color: var(--cream); margin-bottom: 16px; letter-spacing: -.01em;
+  }
+  .frow__text p { font-size: clamp(16px, 1.7vw, 18.5px); color: var(--cream-dim); line-height: 1.66; max-width: 470px; }
+  .frow__text p strong { color: var(--cream); font-weight: 600; }
+  .frow__text p + p { margin-top: 15px; }
+  .frow .window { transition: transform .4s cubic-bezier(.16,.84,.44,1), box-shadow .4s; }
+  .frow .window:hover { transform: translateY(-6px); box-shadow: 0 60px 120px -40px rgba(0,0,0,.95); }
+
+  /* ===================================================================
+     SECTION 4 — SHOWCASE
+     =================================================================== */
+  .showcase { background: var(--bg-2); padding: clamp(90px, 12vh, 150px) 0; text-align: center; }
+  .showcase h2 {
+    font-family: var(--ff-serif); font-weight: 700;
+    font-size: clamp(30px, 4.4vw, 52px);
+    letter-spacing: -.01em;
+    color: var(--cream);
+  }
+  .window {
+    margin: 0;
+    max-width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--brown-deep);
+    border: 1px solid var(--hairline);
+    box-shadow: 0 50px 110px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(0,0,0,.3);
+  }
+  .window__bar {
+    height: 42px;
+    display: flex; align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    background: linear-gradient(180deg, #4a3520, #3a2818);
+    border-bottom: 1px solid rgba(0,0,0,.35);
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .window__title { flex: 1; text-align: center; font-size: 13px; color: var(--cream-faint); font-weight: 500; margin-right: 54px; }
+  .window img { display: block; width: 100%; height: auto; }
+  .showcase__caption {
+    margin-top: 34px;
+    font-size: clamp(16px, 1.8vw, 19px);
+    color: var(--cream-dim);
+  }
+  .showcase__caption b { color: var(--cream); font-weight: 600; }
+
+  /* ===================================================================
+     SECTION 5 — COMPATIBILITY
+     =================================================================== */
+  .compat { background: var(--bg); padding: clamp(90px, 12vh, 140px) 0; text-align: center; }
+  .compat__mac { margin: 0 auto 34px; width: clamp(180px, 26vw, 240px); display: flex; align-items: center; justify-content: center; }
+  .compat__mac img { width: 100%; height: auto; display: block; filter: drop-shadow(0 24px 44px rgba(0,0,0,.55)); }
+  .compat h3 {
+    font-family: var(--ff-serif); font-weight: 600;
+    font-size: clamp(22px, 2.6vw, 30px);
+    color: var(--cream);
+    line-height: 1.35;
+    max-width: 540px; margin: 0 auto;
+  }
+  .compat__sub { margin-top: 10px; font-size: 16px; color: var(--cream-faint); }
+  .chip {
+    margin-top: 34px;
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 10px 20px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.045);
+    border: 1px solid var(--hairline);
+    color: var(--cream-faint);
+    font-size: 14px; font-weight: 500;
+    letter-spacing: .02em;
+  }
+  .chip svg { width: 15px; height: 15px; opacity: .8; }
+  .chip b { color: var(--cream-dim); font-weight: 600; }
+
+  /* ===================================================================
+     SECTION 6 — PRICING
+     =================================================================== */
+  .pricing { background: var(--brown); padding: clamp(96px, 13vh, 170px) 0; text-align: center; position: relative; }
+  .pricing::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05), inset 0 60px 120px -60px rgba(0,0,0,.5);
+  }
+  .pricing .eyebrow { color: var(--amber-bright); }
+  .price {
+    font-family: var(--ff-serif); font-weight: 800;
+    font-size: clamp(72px, 13vw, 148px);
+    line-height: .9;
+    color: var(--cream);
+    letter-spacing: -.02em;
+    margin: 6px 0 0;
+  }
+  .price__sub { font-size: clamp(17px, 2vw, 21px); color: var(--cream-dim); margin-top: 14px; font-style: italic; font-family: var(--ff-serif); }
+  .pricing__list {
+    list-style: none;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 14px;
+    max-width: 700px; margin: 44px auto 0;
+  }
+  .pricing__list li {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 15.5px; color: var(--cream);
+    background: rgba(0,0,0,.18);
+    border: 1px solid rgba(245,236,215,.14);
+    padding: 10px 17px; border-radius: 12px;
+  }
+  .pricing__list svg { width: 15px; height: 15px; color: var(--amber-bright); flex: none; }
+  .pricing .btn { margin-top: 48px; }
+
+  /* ===================================================================
+     SECTION 7 — MAKER
+     =================================================================== */
+  .maker { background: var(--bg-2); padding: clamp(90px, 12vh, 140px) 0; }
+  .maker .wrap { max-width: 760px; }
+  .maker__row { display: flex; gap: 40px; align-items: flex-start; }
+  .maker__logo {
+    flex: none;
+    width: clamp(122px, 17vw, 172px);
+    height: clamp(122px, 17vw, 172px);
+    border-radius: 22px;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-card);
+  }
+  .maker h2 { font-family: var(--ff-serif); font-weight: 700; font-size: clamp(26px, 3.4vw, 40px); color: var(--cream); margin-bottom: 18px; letter-spacing: -.01em; }
+  .maker p { font-size: clamp(16px, 1.7vw, 19px); color: var(--cream-dim); line-height: 1.72; }
+  .maker p strong { color: var(--cream); font-weight: 600; }
+  .maker p em { color: var(--amber-bright); font-style: italic; font-weight: 500; }
+
+  /* ===================================================================
+     SECTION 8 — FOOTER
+     =================================================================== */
+  footer { background: var(--brown-ink); padding: 64px 0 52px; border-top: 1px solid var(--hairline); }
+  .footer__top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; }
+  .footer__logo { font-family: var(--ff-serif); font-weight: 700; font-size: 26px; color: var(--cream); }
+  .footer__links { display: flex; gap: 30px; }
+  .footer__links a { color: var(--cream-dim); text-decoration: none; font-size: 15px; transition: color .2s; }
+  .footer__links a:hover { color: var(--amber-bright); }
+  .footer__legal { margin-top: 38px; padding-top: 28px; border-top: 1px solid var(--hairline); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .footer__legal p { font-size: 13px; color: var(--cream-faint); }
+
+  /* ---------- Privacy & Disclaimer modal ---------- */
+  .disc {
+    border: none; border-radius: 20px;
+    margin: auto;
+    max-width: 540px; width: calc(100% - 48px);
+    padding: 40px 38px 34px;
+    background: var(--card-solid);
+    color: var(--cream);
+    border: 1px solid var(--hairline);
+    box-shadow: 0 50px 120px -30px rgba(0,0,0,.85);
+    position: relative;
+    cursor: auto;
+  }
+  .disc[open] { animation: discIn .32s cubic-bezier(.16,.84,.44,1); }
+  @keyframes discIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+  .disc::backdrop { background: rgba(12,8,4,.72); backdrop-filter: blur(3px); }
+  .disc h3 { font-family: var(--ff-serif); font-weight: 700; font-size: 27px; margin-bottom: 18px; color: var(--cream); letter-spacing: -.01em; }
+  .disc p { font-size: 15.5px; color: var(--cream-dim); line-height: 1.62; }
+  .disc p + p { margin-top: 14px; }
+  .disc p strong { color: var(--cream); font-weight: 600; }
+  .disc .disc__fine { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--cream-faint); line-height: 1.55; }
+  .disc__close { position: absolute; top: 14px; right: 18px; background: none; border: none; color: var(--cream-faint); font-size: 28px; line-height: 1; cursor: pointer; transition: color .2s; }
+  .disc__close:hover { color: var(--amber-bright); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 880px) {
+    .maker__row { flex-direction: column; gap: 26px; }
+  }
+  @media (max-width: 600px) {
+    .frow { grid-template-columns: 1fr; gap: 26px; }
+    .frow__media { max-width: 320px; margin: 0 auto; }
+    .frow__text { text-align: center; }
+    .frow__text p { max-width: none; }
+    .fnum { justify-content: center; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 22px; }
+    .hero__logo { font-size: 60px; }
+    .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ SECTION 1 · HERO ============ -->
+  <header class="hero" data-screen-label="Hero">
+    <div class="hero__bg" id="heroBg"></div>
+    <div class="hero__scrim"></div>
+    <div class="hero__content">
+      <h1 class="hero__logo">FetchDish</h1>
+      <p class="hero__tagline">No ads. No life stories. Just recipes.</p>
+      <div class="hero__cta">
+        <a class="btn btn--amber" href="https://apps.apple.com/us/app/fetchdish/id6762249108?mt=12" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.7 1.3c.1 1-.3 2-.9 2.7-.7.8-1.8 1.4-2.8 1.3-.1-1 .4-2 .9-2.6.7-.8 1.9-1.3 2.8-1.4zM19.6 17c-.5 1.2-.8 1.7-1.5 2.7-1 1.5-2.4 3.3-4.1 3.3-1.5 0-1.9-1-4-1-2 0-2.5 1-3.9 1-1.7 0-3-1.7-4-3.1-2.8-4-3.1-8.8-1.4-11.3 1.2-1.8 3.1-2.9 4.9-2.9 1.8 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-3.9 2.2-3.3 7.8.5 9.2z"/></svg>
+          Download for Mac
+        </a>
+        <p class="ios-note">iOS coming soon</p>
+      </div>
+    </div>
+    <div class="hero__scrolltip">Scroll<span></span></div>
+  </header>
+
+  <!-- ============ SECTION 2 · PROBLEM ============ -->
+  <section class="problem" data-screen-label="Problem">
+    <div class="wrap">
+      <h2 class="reveal">Every recipe site makes you scroll through <span class="em">a novel</span> before you get to the ingredients.</h2>
+      <p class="reveal d1"><strong>FetchDish strips that out.</strong> You paste a URL, you get the recipe. Nothing else — no pop-ups, no autoplay videos, no grandmother's seven-paragraph origin story. Just what you came for.</p>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 3 · FEATURES ============ -->
+  <section class="features" data-screen-label="Features">
+    <div class="wrap">
+      <div class="features__intro reveal">
+        <p class="eyebrow">See it in action</p>
+        <h2>Everything it does. Nothing it doesn't.</h2>
+        <p>Real screens from the Mac app — no mockups.</p>
+      </div>
+
+      <div class="feature-rows">
+
+        <article class="frow reveal">
+          <div class="frow__media">
+            <div class="window">
+              <div class="window__bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="window__title">FetchDish — Add Recipe</span></div>
+              <img src="assets/recipe.png" alt="FetchDish import screen — paste a URL to extract a recipe" loading="lazy" />
+            </div>
+          </div>
+          <div class="frow__text">
+            <p class="fnum">Extract</p>
+            <h3>Extract Instantly</h3>
+            <p>Paste any URL. FetchDish pulls the recipe — ingredients, steps, photo — and leaves the ads, pop-ups and life stories behind.</p>
+          </div>
+        </article>
+
+        <article class="frow reveal">
+          <div class="frow__media">
+            <div class="window">
+              <div class="window__bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="window__title">FetchDish — The Pantry</span></div>
+              <img src="assets/library.png" alt="FetchDish recipe library, The Pantry — a grid of saved recipe cards" loading="lazy" />
+            </div>
+          </div>
+          <div class="frow__text">
+            <p class="fnum">Library</p>
+            <h3>Your Library, the Pantry</h3>
+            <p>Save up to 5 recipes free; unlock unlimited with Pro. No accounts, no cloud — they're yours.</p>
+            <p><strong>Edit any recipe in your Pantry to your taste</strong> — adjust ingredients, swap steps, make it the way you actually cook it.</p>
+          </div>
+        </article>
+
+        <article class="frow reveal">
+          <div class="frow__media">
+            <div class="window">
+              <div class="window__bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="window__title">FetchDish — What Can I Cook?</span></div>
+              <img src="assets/what-can-i-cook.png" alt="FetchDish What Can I Cook screen — pick a cuisine, mood and ingredients you have" loading="lazy" />
+            </div>
+          </div>
+          <div class="frow__text">
+            <p class="fnum">Discover</p>
+            <h3>What Can I Cook?</h3>
+            <p>Tell FetchDish the cuisine and mood you're after and the ingredients you already have. It finds the match from your Pantry.</p>
+          </div>
+        </article>
+
+        <article class="frow reveal">
+          <div class="frow__media">
+            <div class="window">
+              <div class="window__bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="window__title">FetchDish — Shopping List</span></div>
+              <img src="assets/shopping-list.png" alt="FetchDish shopping list — ingredients grouped by aisle with checkboxes" loading="lazy" />
+            </div>
+          </div>
+          <div class="frow__text">
+            <p class="fnum">Shop</p>
+            <h3>Shopping List</h3>
+            <p>Send any recipe's ingredients straight to a shopping list — grouped by aisle, with the source recipe noted and everything checked off as you go.</p>
+          </div>
+        </article>
+
+        <article class="frow reveal">
+          <div class="frow__media">
+            <div class="window">
+              <div class="window__bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="window__title">FetchDish — Profile &amp; Settings</span></div>
+              <img src="assets/settings.png" alt="FetchDish settings — dietary preferences, allergies, appearance and text size" loading="lazy" />
+            </div>
+          </div>
+          <div class="frow__text">
+            <p class="fnum">Yours</p>
+            <h3>Know what's in it</h3>
+            <p>Set your <strong>dietary restrictions and allergies</strong> in Settings, and FetchDish flags any recipe that contains something you'd rather avoid.</p>
+            <p>Paired with editable recipes in the Pantry, every dish bends to the way <em>you</em> eat.</p>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
 
 
-FetchDish
-No ads. No life stories. Just recipes.
+  <!-- ============ SECTION 5 · COMPATIBILITY ============ -->
+  <section class="compat" data-screen-label="Compatibility">
+    <div class="wrap">
+      <div class="compat__mac reveal">
+        <img src="assets/mac.png" alt="An iMac displaying a dashboard" />
+      </div>
+      <h3 class="reveal d1">Requires macOS 14 Sonoma or later. Apple Silicon and Intel.</h3>
+      <div class="chip reveal d2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span><b>iOS</b> — coming soon</span>
+      </div>
+    </div>
+  </section>
 
-Download for Mac
-iOS coming soon
-SCROLL
+  <!-- ============ SECTION 6 · PRICING ============ -->
+  <section class="pricing" id="pricing" data-screen-label="Pricing">
+    <div class="wrap">
+      <p class="eyebrow reveal">FetchDish Pro</p>
+      <div class="price reveal d1">$19.99</div>
+      <p class="price__sub reveal d1">One-time. Yours forever.</p>
+      <ul class="pricing__list reveal d2">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>Unlimited recipe saves</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>Shopping list</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>What Can I Cook</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>Free updates</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>No subscription</li>
+      </ul>
+      <a class="btn btn--amber reveal d2" href="https://apps.apple.com/us/app/fetchdish/id6762249108?mt=12" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.7 1.3c.1 1-.3 2-.9 2.7-.7.8-1.8 1.4-2.8 1.3-.1-1 .4-2 .9-2.6.7-.8 1.9-1.3 2.8-1.4zM19.6 17c-.5 1.2-.8 1.7-1.5 2.7-1 1.5-2.4 3.3-4.1 3.3-1.5 0-1.9-1-4-1-2 0-2.5 1-3.9 1-1.7 0-3-1.7-4-3.1-2.8-4-3.1-8.8-1.4-11.3 1.2-1.8 3.1-2.9 4.9-2.9 1.8 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-3.9 2.2-3.3 7.8.5 9.2z"/></svg>
+        Get FetchDish Pro
+      </a>
+    </div>
+  </section>
 
-Every recipe site makes you scroll through a novel before you get to the ingredients.
-FetchDish strips that out. You paste a URL, you get the recipe. Nothing else — no pop-ups, no autoplay videos, no grandmother's seven-paragraph origin story. Just what you came for.
-SEE IT IN ACTION
-Everything it does. Nothing it doesn't.
-Real screens from the Mac app — no mockups.
+  <!-- ============ SECTION 7 · MAKER ============ -->
+  <section class="maker" data-screen-label="Maker">
+    <div class="wrap">
+      <div class="maker__row reveal">
+        <img class="maker__logo" src="assets/logo.png" alt="FetchDish logo — a chef's knife and a tomato on a marble board" />
+        <div>
+          <h2>Built by one person.</h2>
+          <p><strong>Ferenc Paczka</strong> — <em>the Software Cook</em> — is a digital artist and independent developer based in Marin County, California.</p>
+          <p>FetchDish began as plain frustration: every recipe he opened buried the ingredients under autoplay videos, pop-ups and a thousand-word memoir. Every site was broken the same way, and no one had fixed it. So he did.</p>
+          <p><strong>FetchDish never stores or takes your information.</strong> No accounts, no tracking, no cloud — your recipes live on your Mac, and only your Mac.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
+  <!-- ============ SECTION 8 · FOOTER ============ -->
+  <footer data-screen-label="Footer">
+    <div class="wrap">
+      <div class="footer__top">
+        <div class="footer__logo">FetchDish</div>
+        <nav class="footer__links">
+          <a href="#" data-disc>Privacy &amp; Disclaimer</a>
+          <a href="support.html">Support</a>
+        </nav>
+      </div>
+      <div class="footer__legal">
+        <p>© 2026 FetchDish. All rights reserved.</p>
+        <p>FetchDish is an independent app. Not affiliated with Apple Inc.</p>
+      </div>
+    </div>
+  </footer>
 
+  <!-- Privacy & Disclaimer modal -->
+  <dialog class="disc" id="discModal">
+    <button class="disc__close" data-close aria-label="Close">&times;</button>
+    <h3>Privacy &amp; Disclaimer</h3>
+    <p><strong>FetchDish never stores, collects, or transmits your personal information.</strong> There are no accounts, no analytics, and no cloud sync — every recipe you save lives only on your Mac.</p>
+    <p>Recipe extraction happens on your device. We don't see the URLs you paste, the recipes you keep, or anything about how you cook.</p>
+    <p class="disc__fine">FetchDish is an independent app and is not affiliated with, endorsed by, or sponsored by Apple Inc. macOS and Apple Silicon are trademarks of Apple Inc., registered in the U.S. and other countries.</p>
+  </dialog>
 
-FetchDish — Add Recipe
-￼
-EXTRACT
-Extract Instantly
-Paste any URL. FetchDish pulls the recipe — ingredients, steps, photo — and leaves the ads, pop-ups and life stories behind.
+  <script>
+    // Scroll-reveal
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
+    // Gentle hero parallax
+    const heroBg = document.getElementById('heroBg');
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (y < window.innerHeight) heroBg.style.transform = `scale(1.06) translateY(${y * 0.18}px)`;
+        ticking = false;
+      });
+    }, { passive: true });
 
+    // ---- Radiating pulse cursor ----
+    if (matchMedia('(hover: hover)').matches) {
+      const fx = document.createElement('div');
+      fx.className = 'cursor-fx';
+      fx.innerHTML = '<span class="ring"></span><span class="dot"></span>';
+      document.body.appendChild(fx);
+      let x = innerWidth / 2, y = innerHeight / 2, raf = false;
+      addEventListener('mousemove', (e) => {
+        x = e.clientX; y = e.clientY;
+        document.body.classList.remove('cursor-hide');
+        if (!raf) { raf = true; requestAnimationFrame(() => { fx.style.transform = `translate(${x}px, ${y}px)`; raf = false; }); }
+      }, { passive: true });
+      const hoverSel = 'a, button, .btn, .window, [role="button"], [data-disc]';
+      addEventListener('mouseover', (e) => { if (e.target.closest(hoverSel)) fx.classList.add('is-hover'); });
+      addEventListener('mouseout', (e) => { if (e.target.closest(hoverSel)) fx.classList.remove('is-hover'); });
+      document.addEventListener('mouseleave', () => document.body.classList.add('cursor-hide'));
+      document.addEventListener('mouseenter', () => document.body.classList.remove('cursor-hide'));
+    }
 
-FetchDish — The Pantry
-￼
-LIBRARY
-Your Library, the Pantry
-Save up to 5 recipes free; unlock unlimited with Pro. No accounts, no cloud — they're yours.
-Edit any recipe in your Pantry to your taste — adjust ingredients, swap steps, make it the way you actually cook it.
+    // ---- Privacy & Disclaimer modal ----
+    const modal = document.getElementById('discModal');
+    document.querySelectorAll('[data-disc]').forEach((el) => el.addEventListener('click', (e) => { e.preventDefault(); modal.showModal(); }));
+    modal.querySelector('[data-close]').addEventListener('click', () => modal.close());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+  </script>
 
-
-
-FetchDish — What Can I Cook?
-￼
-DISCOVER
-What Can I Cook?
-Tell FetchDish the cuisine and mood you're after and the ingredients you already have. It finds the match from your Pantry.
-
-
-
-FetchDish — Shopping List
-￼
-SHOP
-Shopping List
-Send any recipe's ingredients straight to a shopping list — grouped by aisle, with the source recipe noted and everything checked off as you go.
-
-
-
-FetchDish — Profile & Settings
-￼
-YOURS
-Know what's in it
-Set your dietary restrictions and allergies in Settings, and FetchDish flags any recipe that contains something you'd rather avoid.
-Paired with editable recipes in the Pantry, every dish bends to the way you eat.
-￼
-Requires macOS 14 Sonoma or later. Apple Silicon and Intel.
-
-iOS — coming soon
-FETCHDISH PRO
-$19.99
-One-time. Yours forever.
-	•	 Unlimited recipe saves  Shopping list  What Can I Cook  Free updates  No subscription
-
-Get FetchDish Pro
-￼
-Built by one person.
-Ferenc Paczka — the Software Cook — is a digital artist and independent developer based in Marin County, California.
-FetchDish began as plain frustration: every recipe he opened buried the ingredients under autoplay videos, pop-ups and a thousand-word memoir. Every site was broken the same way, and no one had fixed it. So he did.
-FetchDish never stores or takes your information. No accounts, no tracking, no cloud — your recipes live on your Mac, and only your Mac.
-FetchDish
-Privacy & Disclaimer
-Support
-© 2026 FetchDish. All rights reserved.
-FetchDish is an independent app. Not affiliated with Apple Inc.
+  <template id="__bundler_thumbnail">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#3D2B1A"/>
+      <text x="50" y="60" font-family="Georgia, serif" font-size="42" font-weight="bold" fill="#F5ECD7" text-anchor="middle">F</text>
+    </svg>
+  </template>
+</body>
+</html>
+ferenc@FERENCs-Mac-mini ~ % 
